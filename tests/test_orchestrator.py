@@ -21,6 +21,8 @@ def test_qa_run_writes_deliverable(tmp_path: Path):
     assert Path(deliverable.deliverable_path).exists()
     assert deliverable.structured_output["evidence_count"] >= 2
     assert deliverable.structured_output["agent_used"] is False
+    assert any(item["role"] == "retrieval_planner" for item in deliverable.agent_usage)
+    assert any(item["role"] == "qa_agent" for item in deliverable.agent_usage)
 
 
 def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
@@ -39,5 +41,7 @@ def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
 
     assert deliverable.route == TaskRoute.SIMULATION
     assert deliverable.structured_output["execution_status"] == "needs-approval"
+    assert any(item["role"] == "retrieval_planner" for item in deliverable.agent_usage)
+    assert any(item["role"] == "simulation_planner" for item in deliverable.agent_usage)
 
 

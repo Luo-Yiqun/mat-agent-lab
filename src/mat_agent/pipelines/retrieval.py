@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 from pathlib import Path
 
+from ..ai import AgentManager
 from ..legacy.literature_review import LegacyLiteratureReviewAdapter
 from ..models import EvidenceRecord, RetrievalResult, UserRequest
 
@@ -17,8 +18,13 @@ def utc_now() -> str:
 
 
 class RetrievalPipeline:
-    def __init__(self, legacy_adapter: LegacyLiteratureReviewAdapter | None = None) -> None:
+    def __init__(
+        self,
+        legacy_adapter: LegacyLiteratureReviewAdapter | None = None,
+        agent_manager: AgentManager | None = None,
+    ) -> None:
         self.legacy_adapter = legacy_adapter or LegacyLiteratureReviewAdapter()
+        self.agent_manager = agent_manager
 
     def run(self, request: UserRequest) -> RetrievalResult:
         result = RetrievalResult()
@@ -62,6 +68,7 @@ class RetrievalPipeline:
 
         result.artifacts["legacy_assets"] = self.legacy_adapter.describe_assets()
         result.coverage.setdefault("task", bool(request.task))
+        self._plan_and_critique(request, result)
         return result
 
     def _load_local_file(self, path: Path, source_type: str, result: RetrievalResult) -> None:
@@ -100,4 +107,45 @@ class RetrievalPipeline:
         for page in reader.pages:
             parts.append(page.extract_text() or "")
         return "\n".join(parts)
+
+    def _plan_and_critique(self, request: UserRequest, result: RetrievalResult) -> None:
+        if self.agent_manager is None:
+            return
+
+        evidence = [
+            {
+                "title": record.title,
+                "source_type": record.source_type,
+                "provenance": record.provenance,
+                "metadata": record.metadata,
+                "snippet": " ".join(record.content.split())[:1200],
+            }
+            for record in result.records[:6]
+        ]
+        request_context = {
+            "material_id": request.material_id,
+            "material_name": request.material_name,
+            "paper_paths": request.paper_paths,
+            "structure_paths": request.structure_paths,
+            "constraints": request.constraints,
+        }
+        ai_result = self.agent_manager.plan_retrieval(request.task, request_context, evidence)
+        if not ai_result:
+            result.artifacts["retrieval_agent"] = {"agent_used": False}
+            return
+
+        missing_information = ai_result.get("missing_information", [])
+        if isinstance(missing_information, list):
+            for item in missing_information:
+                if isinstance(item, str) and item.strip():
+                    result.warnings.append(f"retrieval gap: {item.strip()}")
+
+        result.artifacts["retrieval_agent"] = {
+            "agent_used": True,
+            "retrieval_focus": ai_result.get("retrieval_focus", ""),
+            "priority_sources": ai_result.get("priority_sources", []),
+            "coverage_assessment": ai_result.get("coverage_assessment", ""),
+            "missing_information": missing_information if isinstance(missing_information, list) else [],
+            "critique": ai_result.get("critique", ""),
+        }
 

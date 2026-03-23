@@ -12,6 +12,7 @@ except ImportError:  # pragma: no cover
 
 
 DEFAULT_AGENT_MODELS = {
+    "retrieval_planner": "gpt-5-mini",
     "qa_agent": "claude-sonnet-4-20250514-v1:0",
     "simulation_planner": "gpt-5",
 }
@@ -50,9 +51,56 @@ class AgentManager:
     def get_usage(self) -> list[dict[str, Any]]:
         return list(self.usage_log)
 
-    def answer_question(self, task: str, evidence: list[dict[str, Any]]) -> dict[str, Any] | None:
+    def plan_retrieval(
+        self,
+        task: str,
+        request_context: dict[str, Any],
+        evidence: list[dict[str, Any]],
+    ) -> dict[str, Any] | None:
+        tools = [
+            "local_file_reader",
+            "pdf_text_extractor",
+            "legacy_literature_review_handoff",
+        ]
         if not self.available():
-            self._record("qa_agent", DEFAULT_AGENT_MODELS["qa_agent"], "skipped", "AI disabled or config unavailable.")
+            self._record(
+                "retrieval_planner",
+                DEFAULT_AGENT_MODELS["retrieval_planner"],
+                "skipped",
+                "AI disabled or config unavailable.",
+                tools,
+            )
+            return None
+
+        messages = [
+            {
+                "role": "system",
+                "content": (
+                    "You are a retrieval planning and critique agent for computational materials workflows. "
+                    "Given the task, request context, and retrieved evidence, identify the best evidence focus, "
+                    "coverage gaps, and critique the retrieval quality. "
+                    "Return strict JSON with keys: retrieval_focus, priority_sources, coverage_assessment, "
+                    "missing_information, critique."
+                ),
+            },
+            {
+                "role": "user",
+                "content": json.dumps(
+                    {
+                        "task": task,
+                        "request_context": request_context,
+                        "evidence": evidence,
+                    },
+                    ensure_ascii=False,
+                ),
+            },
+        ]
+        return self._generate_json("retrieval_planner", DEFAULT_AGENT_MODELS["retrieval_planner"], messages, tools)
+
+    def answer_question(self, task: str, evidence: list[dict[str, Any]]) -> dict[str, Any] | None:
+        tools = ["grounded_evidence_bundle", "citation_pack"]
+        if not self.available():
+            self._record("qa_agent", DEFAULT_AGENT_MODELS["qa_agent"], "skipped", "AI disabled or config unavailable.", tools)
             return None
 
         messages = [
@@ -75,11 +123,18 @@ class AgentManager:
                 ),
             },
         ]
-        return self._generate_json("qa_agent", DEFAULT_AGENT_MODELS["qa_agent"], messages)
+        return self._generate_json("qa_agent", DEFAULT_AGENT_MODELS["qa_agent"], messages, tools)
 
     def plan_simulation(self, task: str, context: dict[str, Any]) -> dict[str, Any] | None:
+        tools = ["retrieval_context_bundle", "software_hint_selector", "human_approval_gate"]
         if not self.available():
-            self._record("simulation_planner", DEFAULT_AGENT_MODELS["simulation_planner"], "skipped", "AI disabled or config unavailable.")
+            self._record(
+                "simulation_planner",
+                DEFAULT_AGENT_MODELS["simulation_planner"],
+                "skipped",
+                "AI disabled or config unavailable.",
+                tools,
+            )
             return None
 
         messages = [
@@ -102,7 +157,7 @@ class AgentManager:
                 ),
             },
         ]
-        return self._generate_json("simulation_planner", DEFAULT_AGENT_MODELS["simulation_planner"], messages)
+        return self._generate_json("simulation_planner", DEFAULT_AGENT_MODELS["simulation_planner"], messages, tools)
 
     def _client_instance(self):
         if self._client is None:
@@ -112,7 +167,13 @@ class AgentManager:
             )
         return self._client
 
-    def _generate_json(self, role: str, model: str, messages: list[dict[str, str]]) -> dict[str, Any] | None:
+    def _generate_json(
+        self,
+        role: str,
+        model: str,
+        messages: list[dict[str, str]],
+        tools: list[str],
+    ) -> dict[str, Any] | None:
         try:
             client = self._client_instance()
             try:
@@ -122,10 +183,10 @@ class AgentManager:
             text = self._extract_text(response)
             payload = self._parse_json(text)
         except Exception as exc:  # pragma: no cover - network/runtime dependent
-            self._record(role, model, "fallback", self._sanitize_error(exc))
+            self._record(role, model, "fallback", self._sanitize_error(exc), tools)
             return None
 
-        self._record(role, model, "used", "AI response applied.")
+        self._record(role, model, "used", "AI response applied.", tools)
         return payload
 
     def _extract_text(self, response: Any) -> str:
@@ -151,13 +212,14 @@ class AgentManager:
                 raise
             return json.loads(text[start : end + 1])
 
-    def _record(self, role: str, model: str, status: str, note: str) -> None:
+    def _record(self, role: str, model: str, status: str, note: str, tools: list[str]) -> None:
         self.usage_log.append(
             {
                 "role": role,
                 "model": model,
                 "status": status,
                 "note": note,
+                "tools": tools,
             }
         )
 

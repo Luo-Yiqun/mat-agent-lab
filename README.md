@@ -16,11 +16,25 @@ This repo contains a runnable application skeleton for the simplified proposal f
 
 The new app uses AI only where it adds value and keeps deterministic validators in charge of control:
 
+- `retrieval_planner` uses `gpt-5-mini` for retrieval planning and lightweight critique
 - `qa_agent` uses `claude-sonnet-4-20250514-v1:0` for evidence-grounded answer synthesis
 - `simulation_planner` uses `gpt-5` for structured simulation planning
 - deterministic routing, evidence validation, input gating, and result gating remain non-LLM
 
 If AI is unavailable or disabled, the app falls back to deterministic behavior and records that in the deliverable.
+
+## Agent Tools
+
+Each AI agent is given a constrained tool/context bundle rather than arbitrary repo access:
+
+- `retrieval_planner` in [src/mat_agent/pipelines/retrieval.py](c:/Users/18000/OneDrive/Desktop/11766-mat-agent-lab/src/mat_agent/pipelines/retrieval.py)
+  tools: `local_file_reader`, `pdf_text_extractor`, `legacy_literature_review_handoff`
+- `qa_agent` in [src/mat_agent/pipelines/qa.py](c:/Users/18000/OneDrive/Desktop/11766-mat-agent-lab/src/mat_agent/pipelines/qa.py)
+  tools: `grounded_evidence_bundle`, `citation_pack`
+- `simulation_planner` in [src/mat_agent/pipelines/simulation.py](c:/Users/18000/OneDrive/Desktop/11766-mat-agent-lab/src/mat_agent/pipelines/simulation.py)
+  tools: `retrieval_context_bundle`, `software_hint_selector`, `human_approval_gate`
+
+These are not API-side function-calling tools yet. They are explicit context/tool contracts enforced by the application layer and recorded in `deliverable.json` under `agent_usage`.
 
 ## Config
 

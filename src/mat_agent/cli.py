@@ -75,7 +75,10 @@ def main() -> None:
     if deliverable.agent_usage:
         print("agent_usage:")
         for usage in deliverable.agent_usage:
+            tools = ", ".join(usage.get("tools", []))
             print(f"- {usage['role']}: {usage['model']} ({usage['status']})")
+            if tools:
+                print(f"  tools: {tools}")
 
 
 if __name__ == "__main__":

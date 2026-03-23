@@ -22,7 +22,7 @@ class MaterialsAgentApp:
     ) -> None:
         self.state_store = RunStateStore(state_root)
         self.agent_manager = AgentManager(enable_ai=enable_ai, config_path=config_path)
-        self.retrieval_pipeline = RetrievalPipeline()
+        self.retrieval_pipeline = RetrievalPipeline(agent_manager=self.agent_manager)
         self.qa_pipeline = QAPipeline(agent_manager=self.agent_manager)
         self.simulation_pipeline = SimulationPipeline(agent_manager=self.agent_manager)
 
