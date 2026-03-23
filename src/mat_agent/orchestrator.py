@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from dataclasses import asdict
 
+from .ai import AgentManager
 from .models import FinalDeliverable, TaskRoute, UserRequest
 from .pipelines.qa import QAPipeline
 from .pipelines.retrieval import RetrievalPipeline
@@ -13,11 +14,17 @@ from .validators import EvidenceValidator, FinalConfidenceCalibrator, InputGate,
 
 
 class MaterialsAgentApp:
-    def __init__(self, state_root: str = "run-artifacts") -> None:
+    def __init__(
+        self,
+        state_root: str = "run-artifacts",
+        enable_ai: bool = True,
+        config_path: str = "config.json",
+    ) -> None:
         self.state_store = RunStateStore(state_root)
+        self.agent_manager = AgentManager(enable_ai=enable_ai, config_path=config_path)
         self.retrieval_pipeline = RetrievalPipeline()
-        self.qa_pipeline = QAPipeline()
-        self.simulation_pipeline = SimulationPipeline()
+        self.qa_pipeline = QAPipeline(agent_manager=self.agent_manager)
+        self.simulation_pipeline = SimulationPipeline(agent_manager=self.agent_manager)
 
     def run(self, request: UserRequest, approve_execution: bool = False) -> FinalDeliverable:
         state = self.state_store.start(request)
@@ -158,12 +165,16 @@ class MaterialsAgentApp:
             structured_output=structured_output,
             citations=citations,
             confidence=confidence,
+            agent_usage=self.agent_manager.get_usage(),
             warnings=warnings,
             artifacts=state.artifacts,
             state_path=state.paths["state"],
         )
+        deliverable.deliverable_path = state.paths["deliverable"]
+        self.state_store.attach_artifact(state, "agent_usage", self.agent_manager.get_usage())
         deliverable_path = self.state_store.write_deliverable(state, deliverable)
         deliverable.deliverable_path = str(deliverable_path.resolve())
+        self.state_store.write_deliverable(state, deliverable)
         self.state_store.record_event(state, "finalize", "ok", {"deliverable": deliverable.deliverable_path})
         self.state_store.write_state(state)
         return deliverable

@@ -8,7 +8,9 @@ version = "0.1.0"
 description = "Multi-agent framework for autonomous computational materials analysis"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "openai>=1.0.0",
+]
 
 [project.scripts]
 mat-agent = "mat_agent.cli:main"

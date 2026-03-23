@@ -24,6 +24,8 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--route", choices=[route.value for route in TaskRoute], help="Force a route.")
     parser.add_argument("--approve-execution", action="store_true", help="Pass the human approval gate for dry-run execution.")
     parser.add_argument("--state-root", default="run-artifacts", help="Directory for run state and deliverables.")
+    parser.add_argument("--config", default="config.json", help="Path to the AI gateway config JSON file.")
+    parser.add_argument("--no-ai", action="store_true", help="Disable AI agents and use deterministic fallbacks only.")
     parser.add_argument("--json", action="store_true", help="Print the full deliverable as JSON.")
     return parser
 
@@ -50,7 +52,11 @@ def main() -> None:
         route_hint=TaskRoute(args.route) if args.route else None,
     )
 
-    app = MaterialsAgentApp(state_root=args.state_root)
+    app = MaterialsAgentApp(
+        state_root=args.state_root,
+        enable_ai=not args.no_ai,
+        config_path=args.config,
+    )
     deliverable = app.run(request, approve_execution=args.approve_execution)
 
     if args.json:
@@ -66,6 +72,10 @@ def main() -> None:
         print("warnings:")
         for warning in deliverable.warnings:
             print(f"- {warning}")
+    if deliverable.agent_usage:
+        print("agent_usage:")
+        for usage in deliverable.agent_usage:
+            print(f"- {usage['role']}: {usage['model']} ({usage['status']})")
 
 
 if __name__ == "__main__":

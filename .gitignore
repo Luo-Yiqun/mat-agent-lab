@@ -10,10 +10,10 @@ dist/
 
 .env
 .env.*
+config.json
 
 run-artifacts/
 tmp_figure2.png
 
 LiteratureReview/output.txt
 LiteratureReview/*.log
-

@@ -17,7 +17,6 @@ class LegacyLiteratureReviewAdapter:
             "utilities.py",
             "html_parser.py",
             "evaluate.py",
-            "config.example.json",
         ]
         return {
             "root": str(self.root.resolve()),
@@ -38,6 +37,7 @@ class LegacyLiteratureReviewAdapter:
         ]
         return {
             "has_citer_module": (self.root / "citer.py").exists(),
+            "root_gateway_config_present": Path("config.json").exists(),
             "optional_dependencies": {
                 module_name: importlib.util.find_spec(module_name) is not None
                 for module_name in optional_modules

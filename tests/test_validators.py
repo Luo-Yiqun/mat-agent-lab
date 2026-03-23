@@ -20,3 +20,4 @@ def test_evidence_validator_accepts_provenanced_record():
     assert gate.passed is True
     assert 0.0 <= gate.confidence <= 1.0
 
+

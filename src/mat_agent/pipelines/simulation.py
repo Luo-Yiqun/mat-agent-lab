@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from ..ai import AgentManager
 from ..models import AnalysisResult, ExecutionResult, RetrievalResult, SimulationPlan, UserRequest
 
 
@@ -12,7 +13,47 @@ SIMULATION_SOFTWARE_HINTS = {
 
 
 class SimulationPipeline:
+    def __init__(self, agent_manager: AgentManager | None = None) -> None:
+        self.agent_manager = agent_manager
+
     def prepare(self, request: UserRequest, retrieval: RetrievalResult) -> SimulationPlan:
+        if self.agent_manager is not None:
+            ai_result = self.agent_manager.plan_simulation(
+                request.task,
+                {
+                    "material_id": request.material_id,
+                    "material_name": request.material_name,
+                    "constraints": request.constraints,
+                    "evidence": [
+                        {
+                            "title": record.title,
+                            "source_type": record.source_type,
+                            "provenance": record.provenance,
+                            "snippet": " ".join(record.content.split())[:1200],
+                        }
+                        for record in retrieval.records[:5]
+                    ],
+                },
+            )
+            if ai_result:
+                parameters = ai_result.get("parameters", {})
+                if not isinstance(parameters, dict):
+                    parameters = {}
+                parameters.setdefault("task", request.task)
+                parameters.setdefault("material_id", request.material_id)
+                parameters.setdefault("material_name", request.material_name)
+                parameters.setdefault("constraints", request.constraints)
+                return SimulationPlan(
+                    summary=str(ai_result.get("summary", "")).strip(),
+                    software=str(ai_result.get("software", self._choose_software(request))).strip(),
+                    parameters=parameters,
+                    requires_human_approval=bool(ai_result.get("requires_human_approval", True)),
+                    artifacts={
+                        "assumptions": ai_result.get("assumptions", []),
+                        "agent_used": True,
+                    },
+                )
+
         software = self._choose_software(request)
         summary = (
             f"Prepared a dry-run simulation plan for task '{request.task}' "
@@ -32,6 +73,7 @@ class SimulationPipeline:
             parameters=parameters,
             requires_human_approval=True,
             artifacts={
+                "agent_used": False,
                 "prep_notes": [
                     "Execution backend is intentionally dry-run until a real scheduler wrapper is configured.",
                     "Human approval is required before any expensive or external job submission.",

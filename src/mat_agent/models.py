@@ -98,6 +98,7 @@ class FinalDeliverable:
     structured_output: dict[str, Any]
     citations: list[dict[str, Any]]
     confidence: float
+    agent_usage: list[dict[str, Any]] = field(default_factory=list)
     warnings: list[str] = field(default_factory=list)
     artifacts: dict[str, Any] = field(default_factory=dict)
     state_path: str | None = None
