@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from mat_agent.ai import AgentManager
 from mat_agent.legacy.literature_review import LegacyLiteratureReviewAdapter
 from mat_agent.models import TaskRoute, UserRequest
 from mat_agent.orchestrator import MaterialsAgentApp
@@ -127,5 +128,38 @@ def test_qe_single_point_templates_are_generated_from_structure(tmp_path: Path):
     assert deliverable.route == TaskRoute.SIMULATION
     assert (generated_dir / "qe_scf.in").exists()
     assert (generated_dir / "run_qe.sh").exists()
+    assert deliverable.structured_output["generated_files"]["qe_scf.in"].endswith("qe_scf.in")
+
+
+def test_qe_single_point_templates_are_generated_with_ai_planner(tmp_path: Path, monkeypatch):
+    structure = tmp_path / "benzene.cif"
+    structure.write_text("data_benzene\n_cell_length_a 1.0\n", encoding="utf-8")
+
+    def fake_plan(self, task: str, context: dict):
+        return {
+            "summary": "AI planned a QE single-point calculation.",
+            "software": "Quantum ESPRESSO",
+            "requires_human_approval": True,
+            "parameters": {"ecutwfc": 80},
+            "assumptions": ["Using a placeholder SCF setup."],
+        }
+
+    monkeypatch.setattr(AgentManager, "plan_simulation", fake_plan)
+
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="Generate Quantum ESPRESSO single-point energy calculation scripts",
+            structure_paths=[str(structure)],
+            constraints={"software": "quantum espresso"},
+        )
+    )
+
+    generated_dir = Path(deliverable.deliverable_path).parent / "generated"
+
+    assert deliverable.route == TaskRoute.SIMULATION
+    assert (generated_dir / "qe_scf.in").exists()
+    assert (generated_dir / "run_qe.sh").exists()
+    assert deliverable.structured_output["generated_files"]["qe_scf.in"].endswith("qe_scf.in")
 
 

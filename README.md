@@ -134,6 +134,8 @@ Generated files currently include:
 - `qe_scf.in`
 - `run_qe.sh`
 
+The CLI prints the generated file paths after the run completes.
+
 Prompt requirements => FHI-aims or QE input file (few-shot):
 
 This uses a standalone few-shot generator over local examples in `data/FHI-aims/*` and `data/QE/*`, and writes outputs into `test_generated_files/`.

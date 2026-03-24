@@ -68,6 +68,11 @@ def main() -> None:
     print(f"confidence: {deliverable.confidence}")
     print(f"state: {deliverable.state_path}")
     print(f"deliverable: {deliverable.deliverable_path}")
+    generated_files = deliverable.structured_output.get("generated_files", {})
+    if generated_files:
+        print("generated_files:")
+        for name, path in generated_files.items():
+            print(f"- {name}: {path}")
     if deliverable.warnings:
         print("warnings:")
         for warning in deliverable.warnings:

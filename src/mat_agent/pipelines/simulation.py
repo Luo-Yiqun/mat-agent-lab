@@ -45,15 +45,20 @@ class SimulationPipeline:
                 parameters.setdefault("material_id", request.material_id)
                 parameters.setdefault("material_name", request.material_name)
                 parameters.setdefault("constraints", request.constraints)
+                software = str(ai_result.get("software", self._choose_software(request))).strip()
+                artifacts = {
+                    "assumptions": ai_result.get("assumptions", []),
+                    "agent_used": True,
+                }
+                generated_files = self._generate_input_files(request, software)
+                if generated_files:
+                    artifacts["generated_files"] = generated_files
                 return SimulationPlan(
                     summary=str(ai_result.get("summary", "")).strip(),
-                    software=str(ai_result.get("software", self._choose_software(request))).strip(),
+                    software=software,
                     parameters=parameters,
                     requires_human_approval=bool(ai_result.get("requires_human_approval", True)),
-                    artifacts={
-                        "assumptions": ai_result.get("assumptions", []),
-                        "agent_used": True,
-                    },
+                    artifacts=artifacts,
                 )
 
         software = self._choose_software(request)
@@ -117,6 +122,7 @@ class SimulationPipeline:
                 "execution_status": execution.status,
                 "parameters": plan.parameters,
                 "artifacts": execution.artifacts,
+                "generated_files": plan.artifacts.get("generated_file_paths", {}),
             },
             confidence=confidence,
         )
