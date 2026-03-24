@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import asdict
+from pathlib import Path
 
 from .ai import AgentManager
 from .models import FinalDeliverable, TaskRoute, UserRequest
@@ -87,6 +88,7 @@ class MaterialsAgentApp:
             )
 
         simulation_plan = self.simulation_pipeline.prepare(request, retrieval)
+        self._materialize_generated_files(state, simulation_plan)
         plan_gate = InputGate.validate(simulation_plan)
         self.state_store.attach_output(state, "simulation_plan", asdict(simulation_plan))
         self.state_store.record_event(
@@ -178,4 +180,19 @@ class MaterialsAgentApp:
         self.state_store.record_event(state, "finalize", "ok", {"deliverable": deliverable.deliverable_path})
         self.state_store.write_state(state)
         return deliverable
+
+    def _materialize_generated_files(self, state, simulation_plan) -> None:
+        generated_files = simulation_plan.artifacts.get("generated_files", {})
+        if not isinstance(generated_files, dict) or not generated_files:
+            return
+
+        output_dir = Path(state.paths["run_dir"]) / "generated"
+        output_dir.mkdir(parents=True, exist_ok=True)
+        written_files: dict[str, str] = {}
+        for filename, content in generated_files.items():
+            file_path = output_dir / filename
+            file_path.write_text(content, encoding="utf-8")
+            written_files[filename] = str(file_path.resolve())
+
+        simulation_plan.artifacts["generated_file_paths"] = written_files
 

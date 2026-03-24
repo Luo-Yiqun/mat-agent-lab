@@ -5,6 +5,8 @@ from ..models import AnalysisResult, ExecutionResult, RetrievalResult, Simulatio
 
 
 SIMULATION_SOFTWARE_HINTS = {
+    "fhi-aims": "FHI-aims",
+    "fhi aims": "FHI-aims",
     "vasp": "VASP",
     "quantum espresso": "Quantum ESPRESSO",
     "espresso": "Quantum ESPRESSO",
@@ -67,18 +69,22 @@ class SimulationPipeline:
             "structure_count": len([record for record in retrieval.records if record.source_type == "structure"]),
             "constraints": request.constraints,
         }
+        artifacts = {
+            "agent_used": False,
+            "prep_notes": [
+                "Execution backend is intentionally dry-run until a real scheduler wrapper is configured.",
+                "Human approval is required before any expensive or external job submission.",
+            ]
+        }
+        generated_files = self._generate_input_files(request, software)
+        if generated_files:
+            artifacts["generated_files"] = generated_files
         return SimulationPlan(
             summary=summary,
             software=software,
             parameters=parameters,
             requires_human_approval=True,
-            artifacts={
-                "agent_used": False,
-                "prep_notes": [
-                    "Execution backend is intentionally dry-run until a real scheduler wrapper is configured.",
-                    "Human approval is required before any expensive or external job submission.",
-                ]
-            },
+            artifacts=artifacts,
         )
 
     def execute(self, plan: SimulationPlan, approved: bool) -> ExecutionResult:
@@ -122,4 +128,40 @@ class SimulationPipeline:
             if keyword in software_hint or keyword in task_text:
                 return name
         return "Unspecified simulation backend"
+
+    def _generate_input_files(self, request: UserRequest, software: str) -> dict[str, str]:
+        task_text = request.task.lower()
+        if software != "FHI-aims":
+            return {}
+        if not any(keyword in task_text for keyword in ("single-point", "single point", "spe", "energy")):
+            return {}
+
+        label = request.material_id or request.material_name or "unknown_material"
+        geometry = (
+            f"# geometry.in placeholder for {label}\n"
+            "# Replace this file with the actual structure once retrieval/export is wired.\n"
+            "# Example atom block:\n"
+            "# atom 0.0 0.0 0.0 C\n"
+        )
+        control = (
+            "# control.in for an FHI-aims single-point energy run\n"
+            "xc pbe\n"
+            "spin none\n"
+            "relativistic atomic_zora scalar\n"
+            "sc_accuracy_etot 1e-6\n"
+            "sc_accuracy_eev 1e-3\n"
+            "sc_accuracy_rho 1e-5\n"
+            "output band 0 0 0 0 0 0 1\n"
+        )
+        run_script = (
+            "#!/usr/bin/env bash\n"
+            "set -euo pipefail\n\n"
+            "AIMS_BIN=${AIMS_BIN:-aims.x}\n"
+            "${AIMS_BIN} > aims.out\n"
+        )
+        return {
+            "geometry.in": geometry,
+            "control.in": control,
+            "run_fhi_aims.sh": run_script,
+        }
 

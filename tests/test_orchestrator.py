@@ -45,3 +45,21 @@ def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
     assert any(item["role"] == "simulation_planner" for item in deliverable.agent_usage)
 
 
+def test_fhi_aims_single_point_templates_are_generated(tmp_path: Path):
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="Generate FHI-aims single-point energy calculation scripts",
+            material_id="BENZEN",
+            constraints={"software": "fhi-aims"},
+        )
+    )
+
+    generated_dir = Path(deliverable.deliverable_path).parent / "generated"
+
+    assert deliverable.route == TaskRoute.SIMULATION
+    assert (generated_dir / "geometry.in").exists()
+    assert (generated_dir / "control.in").exists()
+    assert (generated_dir / "run_fhi_aims.sh").exists()
+
+
