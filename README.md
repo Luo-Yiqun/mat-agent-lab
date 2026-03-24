@@ -45,7 +45,7 @@ Create a local root-level `config.json` that matches `config.example.json`. The 
 
 ## CLI Usage
 
-The CLI supports six main workflow shapes.
+The CLI supports five main workflow shapes.
 
 ### 1. CSD reference code => cited papers
 
@@ -111,9 +111,14 @@ python -m mat_agent `
   --json
 ```
 
-### 5. Structure file => QE SPE calculation scripts
+### 5. Input generation => QE or FHI-aims files
 
-This routes through simulation planning and writes placeholder Quantum ESPRESSO single-point files into `run-artifacts/<run_id>/generated/`.
+There are two related input-generation entry points:
+
+- `python -m mat_agent` for structure-conditioned simulation script generation
+- `python -m mat_agent.input_file_generator` for prompt-only few-shot input generation over local examples
+
+Structure file => QE SPE calculation scripts:
 
 ```powershell
 $env:PYTHONPATH='src'
@@ -129,7 +134,7 @@ Generated files currently include:
 - `qe_scf.in`
 - `run_qe.sh`
 
-### 6. Prompt requirements => FHI-aims or QE input file (few-shot)
+Prompt requirements => FHI-aims or QE input file (few-shot):
 
 This uses a standalone few-shot generator over local examples in `data/FHI-aims/*` and `data/QE/*`, and writes outputs into `test_generated_files/`.
 
