@@ -12,6 +12,8 @@ This repo contains a runnable application skeleton for the simplified proposal f
 - `config.json`: local AI gateway config, kept out of git
 - `run-artifacts/`: per-run state snapshots plus `deliverable.json` and `deliverable.txt`
 
+Every finalized run writes both deliverable formats. If a task asks for calculation scripts, the app also writes backend-specific input/script files under `run-artifacts/<run_id>/generated/`.
+
 ## AI Agents
 
 The new app uses AI only where it adds value and keeps deterministic validators in charge of control:
@@ -142,6 +144,11 @@ Generated files currently include:
 - `run_qe.sh`
 
 The CLI prints the generated file paths after the run completes.
+
+Other supported script-generation backends currently include:
+
+- `VASP`: `POSCAR`, `INCAR`, `KPOINTS`, `run_vasp.sh`
+- `BerkeleyGW`: `epsilon.inp`, `sigma.inp`, `run_berkeleygw.sh`
 
 Prompt requirements => FHI-aims or QE input file (few-shot):
 

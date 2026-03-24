@@ -137,7 +137,8 @@ class SimulationPipeline:
 
     def _generate_input_files(self, request: UserRequest, software: str) -> dict[str, str]:
         task_text = request.task.lower()
-        if not any(keyword in task_text for keyword in ("single-point", "single point", "spe", "energy")):
+        wants_scripts = any(keyword in task_text for keyword in ("script", "scripts", "input file", "input files"))
+        if not wants_scripts and not any(keyword in task_text for keyword in ("single-point", "single point", "spe", "energy")):
             return {}
 
         label = request.material_id or request.material_name or "unknown_material"
@@ -178,6 +179,75 @@ class SimulationPipeline:
             return {
                 "qe_scf.in": qe_input,
                 "run_qe.sh": qe_run,
+            }
+
+        if software == "VASP":
+            poscar = (
+                f"{label}\n"
+                "1.0\n"
+                "1.0 0.0 0.0\n"
+                "0.0 1.0 0.0\n"
+                "0.0 0.0 1.0\n"
+                "X\n"
+                "1\n"
+                "Direct\n"
+                "0.0 0.0 0.0\n"
+                f"# Source structure: {structure_hint}\n"
+            )
+            incar = (
+                "SYSTEM = mat_agent single-point\n"
+                "ENCUT = 520\n"
+                "ISMEAR = 0\n"
+                "SIGMA = 0.05\n"
+                "EDIFF = 1E-6\n"
+                "IBRION = -1\n"
+                "NSW = 0\n"
+                "PREC = Accurate\n"
+            )
+            kpoints = (
+                "Automatic mesh\n"
+                "0\n"
+                "Gamma\n"
+                "4 4 4\n"
+                "0 0 0\n"
+            )
+            run_script = (
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n\n"
+                "VASP_BIN=${VASP_BIN:-vasp_std}\n"
+                "mpirun ${VASP_BIN} > vasp.out\n"
+            )
+            return {
+                "POSCAR": poscar,
+                "INCAR": incar,
+                "KPOINTS": kpoints,
+                "run_vasp.sh": run_script,
+            }
+
+        if software == "BerkeleyGW":
+            epsilon = (
+                "epsilon_cutoff 10.0\n"
+                "number_bands 200\n"
+                "screening_semiconductor\n"
+                f"# Source structure: {structure_hint}\n"
+            )
+            sigma = (
+                "band_index_min 1\n"
+                "band_index_max 16\n"
+                "sigma_cutoff 10.0\n"
+            )
+            run_script = (
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n\n"
+                "EPSILON_BIN=${EPSILON_BIN:-epsilon.x}\n"
+                "SIGMA_BIN=${SIGMA_BIN:-sigma.x}\n"
+                "${EPSILON_BIN} > epsilon.out\n"
+                "${SIGMA_BIN} > sigma.out\n"
+            )
+            return {
+                "epsilon.inp": epsilon,
+                "sigma.inp": sigma,
+                "run_berkeleygw.sh": run_script,
             }
 
         if software != "FHI-aims":
