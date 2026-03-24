@@ -22,6 +22,9 @@ def test_qa_run_writes_deliverable(tmp_path: Path):
     assert deliverable.route == TaskRoute.QA
     assert Path(deliverable.deliverable_path).exists()
     assert Path(deliverable.deliverable_text_path).exists()
+    assert Path(deliverable.structured_output["generated_files"]["answer.txt"]).exists()
+    assert Path(deliverable.structured_output["generated_files"]["supporting_references.txt"]).exists()
+    assert Path(deliverable.structured_output["generated_files"]["citations.json"]).exists()
     assert deliverable.structured_output["evidence_count"] >= 2
     assert deliverable.structured_output["agent_used"] is False
     assert any(item["role"] == "retrieval_planner" for item in deliverable.agent_usage)
@@ -52,6 +55,8 @@ def test_pdf_question_returns_direct_answer_with_supporting_references(tmp_path:
     assert deliverable.route == TaskRoute.QA
     assert "Direct answer: The reported gap is 2.30 eV." in deliverable.summary
     assert deliverable.structured_output["direct_answer"] == "The reported gap is 2.30 eV."
+    assert Path(deliverable.structured_output["generated_files"]["answer.txt"]).read_text(encoding="utf-8").startswith("Direct answer:")
+    assert "Figure 2" in Path(deliverable.structured_output["generated_files"]["supporting_references.txt"]).read_text(encoding="utf-8")
     assert any(
         reference["locator"].lower().startswith("figure 2") or reference["locator"].lower().startswith("fig")
         for reference in deliverable.structured_output["supporting_references"]

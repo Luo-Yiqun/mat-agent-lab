@@ -66,6 +66,7 @@ class MaterialsAgentApp:
 
         if route == TaskRoute.QA:
             qa_result = self.qa_pipeline.run(request, retrieval)
+            self._materialize_qa_files(state, qa_result)
             qa_gate = QAQualityGate.validate(qa_result, retrieval)
             self.state_store.attach_output(state, "qa", asdict(qa_result))
             self.state_store.record_event(
@@ -206,4 +207,34 @@ class MaterialsAgentApp:
             written_files[filename] = str(file_path.resolve())
 
         simulation_plan.artifacts["generated_file_paths"] = written_files
+
+    def _materialize_qa_files(self, state, qa_result) -> None:
+        output_dir = Path(state.paths["run_dir"]) / "generated"
+        output_dir.mkdir(parents=True, exist_ok=True)
+
+        answer_path = output_dir / "answer.txt"
+        answer_path.write_text(qa_result.answer, encoding="utf-8")
+
+        supporting_references = qa_result.structured_output.get("supporting_references", [])
+        references_path = output_dir / "supporting_references.txt"
+        reference_lines: list[str] = []
+        if isinstance(supporting_references, list):
+            for reference in supporting_references:
+                if not isinstance(reference, dict):
+                    continue
+                source = reference.get("source", "unknown source")
+                reference_type = reference.get("reference_type", "evidence")
+                locator = reference.get("locator", "sentence")
+                excerpt = reference.get("excerpt", "")
+                reference_lines.append(f"{source} [{reference_type}; {locator}]: {excerpt}")
+        references_path.write_text("\n".join(reference_lines) + ("\n" if reference_lines else ""), encoding="utf-8")
+
+        citations_path = output_dir / "citations.json"
+        citations_path.write_text(self.state_store.to_pretty_json(qa_result.citations), encoding="utf-8")
+
+        qa_result.structured_output["generated_files"] = {
+            "answer.txt": str(answer_path.resolve()),
+            "supporting_references.txt": str(references_path.resolve()),
+            "citations.json": str(citations_path.resolve()),
+        }
 

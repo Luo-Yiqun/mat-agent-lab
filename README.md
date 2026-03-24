@@ -84,6 +84,8 @@ Generated files currently include:
 - `control.in`
 - `run_fhi_aims.sh`
 
+The CLI prints the generated file paths after the run completes.
+
 ### 3. CSD reference code + question => answer
 
 This keeps the material identifier in context and answers through the QA route.
@@ -99,7 +101,7 @@ python -m mat_agent `
 
 ### 4. Papers in PDF + question => answer
 
-This loads one or more local PDFs and prints a direct answer plus supporting figure/table/sentence references.
+This loads one or more local PDFs, prints a direct answer plus supporting figure/table/sentence references, and writes QA artifacts into `run-artifacts/<run_id>/generated/`.
 
 ```powershell
 $env:PYTHONPATH='src'
@@ -109,6 +111,12 @@ python -m mat_agent `
   --paper .\papers\paper2.pdf `
   --route qa
 ```
+
+Generated files currently include:
+
+- `answer.txt`
+- `supporting_references.txt`
+- `citations.json`
 
 ### 5. Input generation => QE or FHI-aims files
 

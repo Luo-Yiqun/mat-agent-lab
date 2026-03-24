@@ -83,13 +83,16 @@ class RunStateStore:
 
     def write_state(self, state: RunState) -> Path:
         path = Path(state.paths["state"])
-        path.write_text(json.dumps(to_jsonable(state), indent=2), encoding="utf-8")
+        path.write_text(self.to_pretty_json(state), encoding="utf-8")
         return path
 
     def write_deliverable(self, state: RunState, payload: Any) -> Path:
         path = Path(state.paths["deliverable"])
-        path.write_text(json.dumps(to_jsonable(payload), indent=2), encoding="utf-8")
+        path.write_text(self.to_pretty_json(payload), encoding="utf-8")
         return path
+
+    def to_pretty_json(self, payload: Any) -> str:
+        return json.dumps(to_jsonable(payload), indent=2)
 
     def write_deliverable_text(self, state: RunState, payload: FinalDeliverable) -> Path:
         path = Path(state.paths["deliverable_text"])
