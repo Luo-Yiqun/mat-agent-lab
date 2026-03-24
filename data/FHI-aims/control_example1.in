@@ -1,0 +1,41 @@
+#########################################################################################
+#
+#   input file control.in tight for partial relaxation
+#
+#########################################################################################
+#  Physical model
+  xc                 pbe
+  spin               none
+ # relativistic       atomic_zora scalar 
+  charge             0.
+
+#  SCF convergence
+  occupation_type    gaussian 0.01
+  mixer              pulay
+    n_max_pulay        8
+    charge_mix_param   0.2
+  sc_accuracy_rho    1E-5
+  sc_accuracy_eev    1E-4
+  sc_accuracy_etot   1E-6
+  sc_accuracy_forces 1E-4 # uncomment for relaxation
+#  sc_iter_limit      500
+#  load_balancing .true. # uncomment when memory bottleneck
+
+#  Eigenvalue solution
+  KS_method	     scalapack_fast
+    empty_states       6
+    basis_threshold    1.e-5
+    prodbas_threshold  1.e-4
+
+#  For periodic boundary conditions
+    k_grid 2 4 2
+
+#  Relaxation
+    relax_geometry trm 1.e-2
+    relax_unit_cell full
+#    harmonic_length_scale 0.01 # uncomment in case of relaxation errors
+#    energy_tolerance 5.e-4  # uncomment in case of relaxation errors
+
+# Vdw Corrections
+#    vdw_correction_hirshfeld
+    many_body_dispersion

@@ -1,0 +1,38 @@
+&CONTROL
+   prefix = 'struct'
+   calculation = 'scf'
+   restart_mode = 'from_scratch'
+   wf_collect = .false.
+   tstress = .true.
+   tprnfor = .true.
+   outdir = './'
+   wfcdir = './'
+   pseudo_dir = '/lus/flare/projects/matml_aesp_CNDA/xuyan/UPF/Hartwigesen-Goedecker-Hutter-PBE/' 
+/
+&SYSTEM
+   ntyp             = 5
+   nat              = 640
+   ibrav            = 0
+   ecutwfc          = 50.0
+/
+&ELECTRONS
+   electron_maxstep = 100
+   conv_thr = 1.0d-10
+   mixing_mode = 'plain'
+   mixing_beta = 0.7
+   mixing_ndim = 8
+   diagonalization = 'david'
+   diago_david_ndim = 4
+   diago_full_acc = .true.
+/
+
+ATOMIC_SPECIES
+N 14.007 N.UPF
+S 32.06 S.UPF
+O 15.999 O.UPF
+C 12.011 C.UPF
+H 1.008 H.UPF
+
+
+K_POINTS automatic
+   4 2 4 0 0 0
