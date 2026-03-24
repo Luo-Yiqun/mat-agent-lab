@@ -99,7 +99,7 @@ python -m mat_agent `
 
 ### 4. Papers in PDF + question => answer
 
-This loads one or more local PDFs and answers against those papers.
+This loads one or more local PDFs and prints a direct answer plus supporting figure/table/sentence references.
 
 ```powershell
 $env:PYTHONPATH='src'
@@ -107,8 +107,7 @@ python -m mat_agent `
   --task "What is the reported band gap in these papers?" `
   --paper .\papers\paper1.pdf `
   --paper .\papers\paper2.pdf `
-  --route qa `
-  --json
+  --route qa
 ```
 
 ### 5. Input generation => QE or FHI-aims files

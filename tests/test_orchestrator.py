@@ -27,6 +27,39 @@ def test_qa_run_writes_deliverable(tmp_path: Path):
     assert any(item["role"] == "qa_agent" for item in deliverable.agent_usage)
 
 
+def test_pdf_question_returns_direct_answer_with_supporting_references(tmp_path: Path):
+    paper = tmp_path / "bandgap.txt"
+    paper.write_text(
+        (
+            "Figure 2 shows the absorption onset for the crystal.\n"
+            "The reported band gap is 2.30 eV for the polymorph studied here.\n"
+            "Table 1 summarizes the optical measurements.\n"
+        ),
+        encoding="utf-8",
+    )
+
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="What is the reported band gap in this paper?",
+            paper_paths=[str(paper)],
+            route_hint=TaskRoute.QA,
+        )
+    )
+
+    assert deliverable.route == TaskRoute.QA
+    assert "Direct answer: The reported gap is 2.30 eV." in deliverable.summary
+    assert deliverable.structured_output["direct_answer"] == "The reported gap is 2.30 eV."
+    assert any(
+        reference["locator"].lower().startswith("figure 2") or reference["locator"].lower().startswith("fig")
+        for reference in deliverable.structured_output["supporting_references"]
+    )
+    assert any(
+        "2.30 eV" in reference["excerpt"]
+        for reference in deliverable.structured_output["supporting_references"]
+    )
+
+
 def test_csd_to_papers_uses_legacy_literature_review_backend(tmp_path: Path, monkeypatch):
     def fake_resolve(self, material_id: str, allow_live: bool = False):
         assert material_id == "BENZEN"

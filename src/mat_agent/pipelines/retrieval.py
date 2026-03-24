@@ -110,7 +110,7 @@ class RetrievalPipeline:
     def _read_content(self, path: Path) -> str:
         if path.suffix.lower() == ".pdf":
             return self._read_pdf(path)
-        return path.read_text(encoding="utf-8", errors="replace")
+        return path.read_text(encoding="utf-8-sig", errors="replace")
 
     def _read_pdf(self, path: Path) -> str:
         if PdfReader is None:

@@ -2,10 +2,20 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from dataclasses import asdict
 
 from .models import TaskRoute, UserRequest
 from .orchestrator import MaterialsAgentApp
+
+
+def safe_print(text: str) -> None:
+    try:
+        print(text)
+    except UnicodeEncodeError:
+        encoding = sys.stdout.encoding or "utf-8"
+        sanitized = text.encode(encoding, errors="replace").decode(encoding, errors="replace")
+        print(sanitized)
 
 
 def build_parser() -> argparse.ArgumentParser:
@@ -60,30 +70,33 @@ def main() -> None:
     deliverable = app.run(request, approve_execution=args.approve_execution)
 
     if args.json:
-        print(json.dumps(asdict(deliverable), indent=2))
+        safe_print(json.dumps(asdict(deliverable), indent=2))
         return
 
-    print(f"run_id: {deliverable.run_id}")
-    print(f"route: {deliverable.route.value}")
-    print(f"confidence: {deliverable.confidence}")
-    print(f"state: {deliverable.state_path}")
-    print(f"deliverable: {deliverable.deliverable_path}")
+    safe_print(f"run_id: {deliverable.run_id}")
+    safe_print(f"route: {deliverable.route.value}")
+    safe_print(f"confidence: {deliverable.confidence}")
+    safe_print(f"state: {deliverable.state_path}")
+    safe_print(f"deliverable: {deliverable.deliverable_path}")
+    if deliverable.summary:
+        safe_print("summary:")
+        safe_print(deliverable.summary)
     generated_files = deliverable.structured_output.get("generated_files", {})
     if generated_files:
-        print("generated_files:")
+        safe_print("generated_files:")
         for name, path in generated_files.items():
-            print(f"- {name}: {path}")
+            safe_print(f"- {name}: {path}")
     if deliverable.warnings:
-        print("warnings:")
+        safe_print("warnings:")
         for warning in deliverable.warnings:
-            print(f"- {warning}")
+            safe_print(f"- {warning}")
     if deliverable.agent_usage:
-        print("agent_usage:")
+        safe_print("agent_usage:")
         for usage in deliverable.agent_usage:
             tools = ", ".join(usage.get("tools", []))
-            print(f"- {usage['role']}: {usage['model']} ({usage['status']})")
+            safe_print(f"- {usage['role']}: {usage['model']} ({usage['status']})")
             if tools:
-                print(f"  tools: {tools}")
+                safe_print(f"  tools: {tools}")
 
 
 if __name__ == "__main__":
