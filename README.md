@@ -45,7 +45,7 @@ Create a local root-level `config.json` that matches `config.example.json`. The 
 
 ## CLI Usage
 
-The CLI supports five main workflow shapes.
+The CLI supports six main workflow shapes.
 
 ### 1. CSD reference code => cited papers
 
@@ -122,6 +122,25 @@ Generated files currently include:
 
 - `qe_scf.in`
 - `run_qe.sh`
+
+### 6. Prompt requirements => FHI-aims or QE input file (few-shot)
+
+This uses a standalone few-shot generator over local examples in `data/FHI-aims/*` and `data/QE/*`, and writes outputs into `test_generated_files/`.
+
+```powershell
+$env:PYTHONPATH='src'
+python -m mat_agent.input_file_generator `
+  --software "fhi-aims" `
+  --prompt "Generate a tight single-point setup for an organic crystal with 4x4x4 k-grid."
+```
+
+```powershell
+$env:PYTHONPATH='src'
+python -m mat_agent.input_file_generator `
+  --software "qe" `
+  --prompt "Create an SCF input for a periodic system with 60 Ry cutoff and dense k-point mesh." `
+  --output-name qe_custom.in
+```
 
 To disable AI and force the deterministic fallback for any of the above:
 
