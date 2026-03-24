@@ -131,12 +131,52 @@ class SimulationPipeline:
 
     def _generate_input_files(self, request: UserRequest, software: str) -> dict[str, str]:
         task_text = request.task.lower()
-        if software != "FHI-aims":
-            return {}
         if not any(keyword in task_text for keyword in ("single-point", "single point", "spe", "energy")):
             return {}
 
         label = request.material_id or request.material_name or "unknown_material"
+        structure_hint = request.structure_paths[0] if request.structure_paths else "<provide structure file>"
+
+        if software == "Quantum ESPRESSO":
+            qe_input = (
+                "&control\n"
+                "  calculation = 'scf'\n"
+                "  prefix = 'mat_agent'\n"
+                "  pseudo_dir = './pseudo'\n"
+                "  outdir = './tmp'\n"
+                "/\n"
+                "&system\n"
+                "  ibrav = 0,\n"
+                "  nat = 0,\n"
+                "  ntyp = 0,\n"
+                "  ecutwfc = 60.0,\n"
+                "/\n"
+                "&electrons\n"
+                "  conv_thr = 1.0d-8,\n"
+                "/\n"
+                "ATOMIC_SPECIES\n"
+                "! Fill in species and pseudopotentials based on the structure source.\n"
+                "CELL_PARAMETERS angstrom\n"
+                "! Fill in lattice vectors using the structure file.\n"
+                "ATOMIC_POSITIONS angstrom\n"
+                f"! Source structure: {structure_hint}\n"
+                "K_POINTS automatic\n"
+                "4 4 4 0 0 0\n"
+            )
+            qe_run = (
+                "#!/usr/bin/env bash\n"
+                "set -euo pipefail\n\n"
+                "PW_BIN=${PW_BIN:-pw.x}\n"
+                "${PW_BIN} -in qe_scf.in > qe.out\n"
+            )
+            return {
+                "qe_scf.in": qe_input,
+                "run_qe.sh": qe_run,
+            }
+
+        if software != "FHI-aims":
+            return {}
+
         geometry = (
             f"# geometry.in placeholder for {label}\n"
             "# Replace this file with the actual structure once retrieval/export is wired.\n"

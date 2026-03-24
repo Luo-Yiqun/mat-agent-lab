@@ -63,3 +63,23 @@ def test_fhi_aims_single_point_templates_are_generated(tmp_path: Path):
     assert (generated_dir / "run_fhi_aims.sh").exists()
 
 
+def test_qe_single_point_templates_are_generated_from_structure(tmp_path: Path):
+    structure = tmp_path / "benzene.cif"
+    structure.write_text("data_benzene\n_cell_length_a 1.0\n", encoding="utf-8")
+
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="Generate Quantum ESPRESSO single-point energy calculation scripts",
+            structure_paths=[str(structure)],
+            constraints={"software": "quantum espresso"},
+        )
+    )
+
+    generated_dir = Path(deliverable.deliverable_path).parent / "generated"
+
+    assert deliverable.route == TaskRoute.SIMULATION
+    assert (generated_dir / "qe_scf.in").exists()
+    assert (generated_dir / "run_qe.sh").exists()
+
+

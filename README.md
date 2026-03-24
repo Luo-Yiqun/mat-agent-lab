@@ -45,7 +45,7 @@ Create a local root-level `config.json` that matches `config.example.json`. The 
 
 ## CLI Usage
 
-The CLI supports four main workflow shapes.
+The CLI supports five main workflow shapes.
 
 ### 1. CSD reference code => cited papers
 
@@ -104,6 +104,24 @@ python -m mat_agent `
   --route qa `
   --json
 ```
+
+### 5. Structure file => QE SPE calculation scripts
+
+This routes through simulation planning and writes placeholder Quantum ESPRESSO single-point files into `run-artifacts/<run_id>/generated/`.
+
+```powershell
+$env:PYTHONPATH='src'
+python -m mat_agent `
+  --task "Generate Quantum ESPRESSO single-point energy calculation scripts" `
+  --structure .\structures\benzene.cif `
+  --software "quantum espresso" `
+  --route simulation
+```
+
+Generated files currently include:
+
+- `qe_scf.in`
+- `run_qe.sh`
 
 To disable AI and force the deterministic fallback for any of the above:
 
