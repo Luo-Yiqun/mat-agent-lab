@@ -559,12 +559,17 @@ class LLMReviewer(Reviewer):
 
         if openai_api_key:
             self.openai_api_key = openai_api_key
+            self.base_url = None
         else:
-            with open("LiteratureReview/config.json", "r", encoding="utf-8") as f:
+            with open("config.json", "r", encoding="utf-8") as f:
                 key = json.load(f)
-                self.openai_api_key = key["openai_api_key"]
+                self.openai_api_key = key["api_key"]
+                self.base_url = key.get("base_url")
+        if openai_api_key and not hasattr(self, "base_url"):
+            self.base_url = None
+        self.client = None
         if self.openai_api_key:
-            openai.api_key = self.openai_api_key
+            self.client = openai.OpenAI(api_key=self.openai_api_key, base_url=self.base_url)
         
         self.rag_stats = {
             "keyword_mean": [],
@@ -914,9 +919,9 @@ class LLMReviewer(Reviewer):
             if embedding_backend == "openai":
                 # Create embeddings in two calls: one for query, one for chunks
                 # q_emb_resp = openai.embeddings.create(model=emb_model, input=[query])
-                q_emb_resp = openai.embeddings.create(model=emb_model, input=keywords)
+                q_emb_resp = self.client.embeddings.create(model=emb_model, input=keywords)
                 query_emb = np.asarray([d.embedding for d in q_emb_resp.data], dtype=np.float32)
-                ch_emb_resp = openai.embeddings.create(model=emb_model, input=chunks)
+                ch_emb_resp = self.client.embeddings.create(model=emb_model, input=chunks)
                 chunk_embs = np.asarray([d.embedding for d in ch_emb_resp.data], dtype=np.float32)
             else:
                 model_name = LLMReviewer._rag_embedding_params[embedding_backend]["model_name"]
@@ -1003,14 +1008,20 @@ class LLMReviewer(Reviewer):
                     "schema": schema
                 }
             }
-            completion = openai.chat.completions.create(
-                model = model,
-                messages = messages,
-                response_format = response_format,
-                # temperature = self.temperature,
-                max_completion_tokens = 6000
+            completion = self.client.responses.create(
+                model=model,
+                input=messages,
+                text={
+                    "format": {
+                        "type": "json_schema",
+                        "name": "ResponseSchema",
+                        "schema": schema,
+                        "strict": True,
+                    }
+                },
+                max_output_tokens=6000,
             )
-            reply = completion.choices[0].message.content.strip()
+            reply = completion.output_text.strip()
 
             # Token usage (may be None depending on API/model/config)
             usage = getattr(completion, "usage", None)
@@ -1070,13 +1081,12 @@ class LLMReviewer(Reviewer):
                     ]
                 }
             ]
-            completion = openai.chat.completions.create(
-                model = model,
-                messages = messages,
-                # temperature = self.temperature,
-                max_completion_tokens = 6000
+            completion = self.client.responses.create(
+                model=model,
+                input=messages,
+                max_output_tokens=6000,
             )
-            reply = completion.choices[0].message.content.strip()
+            reply = completion.output_text.strip()
             with open(self.llm_log_file, "a", encoding="utf-8") as f:
                 f.write('--------------------------------\n')
                 f.write(f"Model: {model}\n")
