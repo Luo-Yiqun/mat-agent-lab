@@ -8,6 +8,7 @@ This repo contains a runnable application skeleton for the simplified proposal f
 ## Project Layout
 
 - `src/mat_agent/`: orchestration, routing, AI agents, validators, and CLI
+- `data/`: sample structures plus few-shot input examples
 - `LiteratureReview/`: preserved legacy literature-review workflow
 - `config.json`: local AI gateway config, kept out of git
 - `run-artifacts/`: per-run state snapshots plus `deliverable.json` and `deliverable.txt`
@@ -133,7 +134,7 @@ Structure file => QE SPE calculation scripts:
 $env:PYTHONPATH='src'
 python -m mat_agent `
   --task "Generate Quantum ESPRESSO single-point energy calculation scripts" `
-  --structure .\structures\benzene.cif `
+  --structure .\data\structures\benzene.cif `
   --software "quantum espresso" `
   --route simulation
 ```

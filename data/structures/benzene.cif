@@ -1,0 +1,3 @@
+﻿data_benzene
+_cell_length_a 1.0
+
