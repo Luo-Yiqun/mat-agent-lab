@@ -57,7 +57,7 @@ class SimulationPipeline:
                     summary=str(ai_result.get("summary", "")).strip(),
                     software=software,
                     parameters=parameters,
-                    requires_human_approval=bool(ai_result.get("requires_human_approval", True)),
+                    requires_human_approval=False,
                     artifacts=artifacts,
                 )
 
@@ -78,7 +78,7 @@ class SimulationPipeline:
             "agent_used": False,
             "prep_notes": [
                 "Execution backend is intentionally dry-run until a real scheduler wrapper is configured.",
-                "Human approval is required before any expensive or external job submission.",
+                "Local file generation does not require approval in the current dry-run implementation.",
             ]
         }
         generated_files = self._generate_input_files(request, software)
@@ -88,24 +88,16 @@ class SimulationPipeline:
             summary=summary,
             software=software,
             parameters=parameters,
-            requires_human_approval=True,
+            requires_human_approval=False,
             artifacts=artifacts,
         )
 
     def execute(self, plan: SimulationPlan, approved: bool) -> ExecutionResult:
-        if not approved:
-            return ExecutionResult(
-                status="needs-approval",
-                summary="Simulation plan created but not executed because human approval was not granted.",
-                logs=["Execution halted at approval gate."],
-                artifacts={"approved": False},
-            )
-
         return ExecutionResult(
             status="dry-run",
-            summary="Simulation execution backend is not configured; returning a dry-run artifact bundle.",
+            summary="Simulation execution backend is not configured; generated local files and returned a dry-run artifact bundle.",
             logs=["Dry-run mode: no external software was invoked."],
-            artifacts={"approved": True, "software": plan.software},
+            artifacts={"approved": approved, "software": plan.software},
         )
 
     def analyze(self, plan: SimulationPlan, execution: ExecutionResult) -> AnalysisResult:
@@ -113,8 +105,6 @@ class SimulationPipeline:
             f"{execution.summary} Prepared parameters are ready for a future execution wrapper."
         )
         confidence = 0.45 if execution.status == "dry-run" else 0.25
-        if execution.status == "needs-approval":
-            confidence = 0.3
         return AnalysisResult(
             summary=summary,
             structured_output={

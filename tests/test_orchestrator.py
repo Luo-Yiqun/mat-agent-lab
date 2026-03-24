@@ -196,7 +196,7 @@ def test_legacy_adapter_detects_configured_chromedriver(tmp_path: Path, monkeypa
     assert adapter.diagnose_environment()["chromedriver_path"] == str(driver_path.resolve())
 
 
-def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
+def test_simulation_run_is_dry_run_without_approval_gate(tmp_path: Path):
     structure = tmp_path / "test.cif"
     structure.write_text("data_test\n_cell_length_a 1.0\n", encoding="utf-8")
 
@@ -211,7 +211,7 @@ def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
     )
 
     assert deliverable.route == TaskRoute.SIMULATION
-    assert deliverable.structured_output["execution_status"] == "needs-approval"
+    assert deliverable.structured_output["execution_status"] == "dry-run"
     assert any(item["role"] == "retrieval_planner" for item in deliverable.agent_usage)
     assert any(item["role"] == "simulation_planner" for item in deliverable.agent_usage)
 

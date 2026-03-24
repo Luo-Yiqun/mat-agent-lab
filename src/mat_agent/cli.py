@@ -32,7 +32,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--accuracy", help="Accuracy target or method hint.")
     parser.add_argument("--budget", help="Budget or runtime constraint.")
     parser.add_argument("--route", choices=[route.value for route in TaskRoute], help="Force a route.")
-    parser.add_argument("--approve-execution", action="store_true", help="Pass the human approval gate for dry-run execution.")
+    parser.add_argument("--approve-execution", action="store_true", help="Reserved for future real execution backends; not needed for current dry-run file generation.")
     parser.add_argument("--state-root", default="run-artifacts", help="Directory for run state and deliverables.")
     parser.add_argument("--config", default="config.json", help="Path to the AI gateway config JSON file.")
     parser.add_argument("--no-ai", action="store_true", help="Disable AI agents and use deterministic fallbacks only.")

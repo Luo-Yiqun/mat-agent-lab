@@ -35,7 +35,7 @@ Each AI agent is given a constrained tool/context bundle rather than arbitrary r
 - `qa_agent` in `src/mat_agent/pipelines/qa.py`
   tools: `grounded_evidence_bundle`, `citation_pack`
 - `simulation_planner` in `src/mat_agent/pipelines/simulation.py`
-  tools: `retrieval_context_bundle`, `software_hint_selector`, `human_approval_gate`
+  tools: `retrieval_context_bundle`, `software_hint_selector`, `dry_run_execution_wrapper`
 
 These are not API-side function-calling tools yet. They are explicit context/tool contracts enforced by the application layer and recorded in `deliverable.json` under `agent_usage`.
 

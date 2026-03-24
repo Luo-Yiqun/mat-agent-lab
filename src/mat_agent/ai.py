@@ -127,7 +127,7 @@ class AgentManager:
         return self._generate_json("qa_agent", DEFAULT_AGENT_MODELS["qa_agent"], messages, tools)
 
     def plan_simulation(self, task: str, context: dict[str, Any]) -> dict[str, Any] | None:
-        tools = ["retrieval_context_bundle", "software_hint_selector", "human_approval_gate"]
+        tools = ["retrieval_context_bundle", "software_hint_selector", "dry_run_execution_wrapper"]
         if not self.available():
             self._record(
                 "simulation_planner",
