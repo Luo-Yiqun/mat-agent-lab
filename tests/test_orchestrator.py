@@ -62,6 +62,43 @@ def test_pdf_question_returns_direct_answer_with_supporting_references(tmp_path:
     )
 
 
+def test_ai_qa_accepts_qualitative_confidence(tmp_path: Path, monkeypatch):
+    paper = tmp_path / "paper.txt"
+    paper.write_text("The reported band gap is 2.30 eV.", encoding="utf-8")
+
+    def fake_answer(self, task: str, evidence: list[dict]):
+        return {
+            "direct_answer": "The reported gap is 2.30 eV.",
+            "answer": "The reported gap is 2.30 eV.",
+            "citations": [{"title": "paper.txt", "source_type": "paper"}],
+            "supporting_references": [
+                {
+                    "source": "paper.txt",
+                    "reference_type": "sentence",
+                    "locator": "sentence",
+                    "excerpt": "The reported band gap is 2.30 eV.",
+                }
+            ],
+            "confidence": "high",
+            "gaps": [],
+        }
+
+    monkeypatch.setattr(AgentManager, "answer_question", fake_answer)
+
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="What is the reported band gap in this paper?",
+            paper_paths=[str(paper)],
+            route_hint=TaskRoute.QA,
+        )
+    )
+
+    assert deliverable.route == TaskRoute.QA
+    assert deliverable.confidence > 0.0
+    assert "Direct answer: The reported gap is 2.30 eV." in deliverable.summary
+
+
 def test_csd_to_papers_uses_legacy_literature_review_backend(tmp_path: Path, monkeypatch):
     def fake_resolve(self, material_id: str, allow_live: bool = False):
         assert material_id == "BENZEN"

@@ -85,7 +85,7 @@ class QAPipeline:
                     "direct_answer": direct_answer,
                     "supporting_references": supporting_references,
                 },
-                confidence=float(ai_result.get("confidence", 0.0) or 0.0),
+                confidence=self._normalize_confidence(ai_result.get("confidence", 0.0)),
             )
 
         direct_answer, supporting_references = self._answer_from_evidence(request, retrieval)
@@ -106,6 +106,30 @@ class QAPipeline:
             structured_output=structured_output,
             confidence=round(confidence, 3),
         )
+
+    def _normalize_confidence(self, value: object) -> float:
+        if isinstance(value, bool):
+            return 1.0 if value else 0.0
+        if isinstance(value, (int, float)):
+            return max(0.0, min(1.0, float(value)))
+        if isinstance(value, str):
+            text = value.strip().lower()
+            qualitative = {
+                "very low": 0.15,
+                "low": 0.3,
+                "medium": 0.55,
+                "moderate": 0.55,
+                "medium-high": 0.7,
+                "high": 0.8,
+                "very high": 0.92,
+            }
+            if text in qualitative:
+                return qualitative[text]
+            try:
+                return max(0.0, min(1.0, float(text)))
+            except ValueError:
+                return 0.0
+        return 0.0
 
     def _answer_from_evidence(self, request: UserRequest, retrieval: RetrievalResult) -> tuple[str, list[dict[str, str]]]:
         references = self._collect_supporting_references(request, retrieval)
