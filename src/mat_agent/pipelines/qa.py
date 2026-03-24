@@ -132,6 +132,13 @@ class QAPipeline:
         return 0.0
 
     def _answer_from_evidence(self, request: UserRequest, retrieval: RetrievalResult) -> tuple[str, list[dict[str, str]]]:
+        legacy_status = self._legacy_status(retrieval)
+        if legacy_status in {"blocked-ccdc", "blocked-webdriver", "error"} and self._is_citation_task(request):
+            return (
+                "The LiteratureReview cited-paper backend was invoked but failed before retrieval completed, "
+                "so no cited-paper list could be produced from the current environment.",
+                [],
+            )
         references = self._collect_supporting_references(request, retrieval)
         direct_answer = self._derive_direct_answer(request, references)
 
@@ -145,6 +152,16 @@ class QAPipeline:
             direct_answer += " Legacy LiteratureReview handoff is prepared for material-based cited-paper retrieval."
 
         return direct_answer, references
+
+    def _legacy_status(self, retrieval: RetrievalResult) -> str:
+        legacy = retrieval.artifacts.get("legacy_literature_review", {})
+        if isinstance(legacy, dict):
+            return str(legacy.get("status", ""))
+        return ""
+
+    def _is_citation_task(self, request: UserRequest) -> bool:
+        text = request.task.lower()
+        return any(keyword in text for keyword in ("paper", "papers", "citation", "citations", "cited", "reference"))
 
     def _derive_direct_answer(self, request: UserRequest, references: list[dict[str, str]]) -> str:
         task = request.task.lower()

@@ -173,7 +173,7 @@ class RetrievalPipeline:
         result.artifacts["legacy_literature_review"] = citation_bundle
 
         status = citation_bundle.get("status", "prepared")
-        if status == "error":
+        if status in {"error", "blocked-ccdc", "blocked-webdriver"}:
             error = citation_bundle.get("error", "legacy cited-paper lookup failed")
             result.warnings.append(f"legacy LiteratureReview citation lookup failed: {error}")
             return

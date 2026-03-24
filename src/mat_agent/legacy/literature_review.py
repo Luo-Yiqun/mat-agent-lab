@@ -40,10 +40,12 @@ class LegacyLiteratureReviewAdapter:
             "pypdf",
             "ccdc",
         ]
+        ccdc_runtime = self._check_ccdc_runtime()
         return {
             "has_citer_module": (self.root / "citer.py").exists(),
             "root_gateway_config_present": Path("config.json").exists(),
             "chromedriver_path": self._detect_chromedriver_path(),
+            "ccdc_runtime": ccdc_runtime,
             "optional_dependencies": {
                 module_name: importlib.util.find_spec(module_name) is not None
                 for module_name in optional_modules
@@ -107,23 +109,38 @@ class LegacyLiteratureReviewAdapter:
             citer_module = self._load_legacy_module("citer.py", "legacy_literature_review_citer")
             webdriver = getattr(citer_module, "webdriver")
             service_cls = getattr(citer_module, "Service")
-            options = webdriver.ChromeOptions()
             driver = None
+            driver_error = None
             chromedriver_path = self._detect_chromedriver_path()
             try:
+                options = webdriver.ChromeOptions()
+                options.add_argument("--headless=new")
+                options.add_argument("--disable-gpu")
+                options.add_argument("--no-sandbox")
+                options.add_argument("--disable-dev-shm-usage")
+                options.add_argument("--window-size=1920,1080")
                 if chromedriver_path:
                     driver = webdriver.Chrome(service=service_cls(chromedriver_path), options=options)
                 else:
                     driver = webdriver.Chrome(options=options)
+            except Exception as exc:
+                driver_error = f"{exc.__class__.__name__}: {exc}"
 
-                citer = citer_module.CCDCCitingPaper(
-                    refcode=material_id,
-                    driver=driver,
-                    json_file=str(self.citing_json),
-                )
+            try:
+                if driver is not None:
+                    citer = citer_module.CCDCCitingPaper(
+                        refcode=material_id,
+                        driver=driver,
+                        json_file=str(self.citing_json),
+                    )
+                else:
+                    citer = citer_module.CCDCCitingPaper(
+                        refcode=material_id,
+                        json_file=str(self.citing_json),
+                    )
                 citer.get_original_papers()
                 citing_papers = citer.citer(False)
-                return {
+                result = {
                     "material_id": material_id,
                     "legacy_root": str(self.root.resolve()),
                     "backend": "LiteratureReview.CCDCCitingPaper",
@@ -133,6 +150,10 @@ class LegacyLiteratureReviewAdapter:
                     "citing_papers": list(citing_papers or []),
                     "environment": environment,
                 }
+                if driver_error:
+                    result["note"] = "Legacy retrieval ran without Selenium driver; requests-based fallback was used."
+                    result["webdriver_error"] = driver_error
+                return result
             finally:
                 if driver is not None:
                     try:
@@ -144,7 +165,7 @@ class LegacyLiteratureReviewAdapter:
                 "material_id": material_id,
                 "legacy_root": str(self.root.resolve()),
                 "backend": "LiteratureReview.CCDCCitingPaper",
-                "status": "error",
+                "status": self._categorize_legacy_error(exc),
                 "source_json": str(self.citing_json.resolve()),
                 "original_papers": [],
                 "citing_papers": [],
@@ -208,3 +229,29 @@ class LegacyLiteratureReviewAdapter:
             if isinstance(value, str) and value.strip():
                 candidates.append(value.strip())
         return candidates
+
+    def _check_ccdc_runtime(self) -> dict[str, Any]:
+        if importlib.util.find_spec("ccdc") is None:
+            return {"available": False, "error": "ccdc package not installed"}
+        try:
+            from ccdc.io import EntryReader  # type: ignore
+
+            EntryReader("CSD")
+        except Exception as exc:
+            return {"available": False, "error": f"{exc.__class__.__name__}: {exc}"}
+        return {"available": True}
+
+    def _categorize_legacy_error(self, exc: Exception) -> str:
+        text = str(exc).lower()
+        if (
+            "support@ccdc.cam.ac.uk" in text
+            or "la code" in text
+            or "licence" in text
+            or "license" in text
+            or "csd data is not available" in text
+            or "cannot load csd data" in text
+        ):
+            return "blocked-ccdc"
+        if "unable to obtain driver for chrome" in text or "nosuchdriverexception" in text:
+            return "blocked-webdriver"
+        return "error"

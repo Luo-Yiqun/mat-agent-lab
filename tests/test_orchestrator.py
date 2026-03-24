@@ -149,6 +149,36 @@ def test_csd_to_papers_uses_legacy_literature_review_backend(tmp_path: Path, mon
     assert deliverable.artifacts["retrieval"]["coverage"]["legacy_cited_papers"] is True
 
 
+def test_csd_to_papers_reports_blocked_legacy_backend(tmp_path: Path, monkeypatch):
+    def fake_resolve(self, material_id: str, allow_live: bool = False):
+        return {
+            "material_id": material_id,
+            "legacy_root": str((tmp_path / "LiteratureReview").resolve()),
+            "backend": "LiteratureReview.CCDCCitingPaper",
+            "status": "blocked-ccdc",
+            "source_json": str((tmp_path / "citing.json").resolve()),
+            "original_papers": [],
+            "citing_papers": [],
+            "error": "RuntimeError: CCDC licence failure",
+            "environment": {"ccdc_runtime": {"available": False, "error": "RuntimeError: CCDC licence failure"}},
+        }
+
+    monkeypatch.setattr(LegacyLiteratureReviewAdapter, "resolve_citing_papers", fake_resolve)
+
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="Find cited papers for CSD reference code BENZEN",
+            material_id="BENZEN",
+            route_hint=TaskRoute.QA,
+        )
+    )
+
+    assert deliverable.route == TaskRoute.QA
+    assert "was invoked but failed before retrieval completed" in deliverable.summary
+    assert any("legacy LiteratureReview citation lookup failed" in warning for warning in deliverable.warnings)
+
+
 def test_legacy_adapter_detects_configured_chromedriver(tmp_path: Path, monkeypatch):
     config_path = tmp_path / "config.json"
     driver_path = tmp_path / "chromedriver.exe"
