@@ -149,6 +149,23 @@ def test_csd_to_papers_uses_legacy_literature_review_backend(tmp_path: Path, mon
     assert deliverable.artifacts["retrieval"]["coverage"]["legacy_cited_papers"] is True
 
 
+def test_legacy_adapter_detects_configured_chromedriver(tmp_path: Path, monkeypatch):
+    config_path = tmp_path / "config.json"
+    driver_path = tmp_path / "chromedriver.exe"
+    driver_path.write_text("", encoding="utf-8")
+    config_path.write_text(
+        '{\n  "chromedriver_path": "' + str(driver_path).replace("\\", "\\\\") + '"\n}\n',
+        encoding="utf-8",
+    )
+
+    monkeypatch.chdir(tmp_path)
+
+    adapter = LegacyLiteratureReviewAdapter(root=tmp_path / "LiteratureReview")
+
+    assert adapter._detect_chromedriver_path() == str(driver_path.resolve())
+    assert adapter.diagnose_environment()["chromedriver_path"] == str(driver_path.resolve())
+
+
 def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
     structure = tmp_path / "test.cif"
     structure.write_text("data_test\n_cell_length_a 1.0\n", encoding="utf-8")

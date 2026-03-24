@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
 import sys
 from pathlib import Path
 from typing import Any
@@ -42,6 +43,7 @@ class LegacyLiteratureReviewAdapter:
         return {
             "has_citer_module": (self.root / "citer.py").exists(),
             "root_gateway_config_present": Path("config.json").exists(),
+            "chromedriver_path": self._detect_chromedriver_path(),
             "optional_dependencies": {
                 module_name: importlib.util.find_spec(module_name) is not None
                 for module_name in optional_modules
@@ -170,13 +172,39 @@ class LegacyLiteratureReviewAdapter:
         return module
 
     def _detect_chromedriver_path(self) -> str | None:
+        env_candidates = [
+            os.environ.get("MAT_AGENT_CHROMEDRIVER"),
+            os.environ.get("CHROMEDRIVER"),
+            os.environ.get("WEBDRIVER_CHROME_DRIVER"),
+        ]
+        config_candidates = self._config_driver_candidates()
         candidates = [
+            *(Path(candidate) for candidate in env_candidates if candidate),
+            *(Path(candidate) for candidate in config_candidates if candidate),
             Path("chromedriver.exe"),
             Path("chromedriver"),
             self.root / "chromedriver.exe",
             self.root / "chromedriver",
+            Path("C:/Users/18000/OneDrive/Desktop/VSCode/chromedriver-win64/chromedriver.exe"),
         ]
         for candidate in candidates:
             if candidate.exists():
                 return str(candidate.resolve())
         return None
+
+    def _config_driver_candidates(self) -> list[str]:
+        config_path = Path("config.json")
+        if not config_path.exists():
+            return []
+
+        try:
+            data = json.loads(config_path.read_text(encoding="utf-8"))
+        except Exception:
+            return []
+
+        candidates: list[str] = []
+        for key in ("chromedriver_path", "chrome_driver_path", "webdriver_chrome_driver"):
+            value = data.get(key)
+            if isinstance(value, str) and value.strip():
+                candidates.append(value.strip())
+        return candidates
