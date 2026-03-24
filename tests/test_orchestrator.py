@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from mat_agent.legacy.literature_review import LegacyLiteratureReviewAdapter
 from mat_agent.models import TaskRoute, UserRequest
 from mat_agent.orchestrator import MaterialsAgentApp
 
@@ -23,6 +24,51 @@ def test_qa_run_writes_deliverable(tmp_path: Path):
     assert deliverable.structured_output["agent_used"] is False
     assert any(item["role"] == "retrieval_planner" for item in deliverable.agent_usage)
     assert any(item["role"] == "qa_agent" for item in deliverable.agent_usage)
+
+
+def test_csd_to_papers_uses_legacy_literature_review_backend(tmp_path: Path, monkeypatch):
+    def fake_resolve(self, material_id: str, allow_live: bool = False):
+        assert material_id == "BENZEN"
+        assert allow_live is True
+        return {
+            "material_id": material_id,
+            "legacy_root": str((tmp_path / "LiteratureReview").resolve()),
+            "backend": "LiteratureReview.CCDCCitingPaper",
+            "status": "cached",
+            "source_json": str((tmp_path / "citing.json").resolve()),
+            "original_papers": [
+                {
+                    "authors": "A. Author",
+                    "journal": "J. Chem.",
+                    "year": "2024",
+                    "doi": "10.1000/example",
+                }
+            ],
+            "citing_papers": [
+                {
+                    "google_scholar_title": "A cited paper for BENZEN",
+                    "google_scholar_snippet": "This paper cites the BENZEN polymorph.",
+                    "publication_link": "https://example.com/paper",
+                }
+            ],
+            "environment": {},
+        }
+
+    monkeypatch.setattr(LegacyLiteratureReviewAdapter, "resolve_citing_papers", fake_resolve)
+
+    app = MaterialsAgentApp(state_root=tmp_path / "state", enable_ai=False)
+    deliverable = app.run(
+        UserRequest(
+            task="Find cited papers for CSD reference code BENZEN",
+            material_id="BENZEN",
+            route_hint=TaskRoute.QA,
+        )
+    )
+
+    assert deliverable.route == TaskRoute.QA
+    assert any(citation["title"] == "A cited paper for BENZEN" for citation in deliverable.citations)
+    assert deliverable.artifacts["retrieval"]["artifacts"]["legacy_literature_review"]["backend"] == "LiteratureReview.CCDCCitingPaper"
+    assert deliverable.artifacts["retrieval"]["coverage"]["legacy_cited_papers"] is True
 
 
 def test_simulation_run_stops_at_approval_gate(tmp_path: Path):
