@@ -103,6 +103,7 @@ class FinalDeliverable:
     artifacts: dict[str, Any] = field(default_factory=dict)
     state_path: str | None = None
     deliverable_path: str | None = None
+    deliverable_text_path: str | None = None
 
 
 @dataclass

@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Any
 from uuid import uuid4
 
-from .models import RunState, UserRequest
+from .models import FinalDeliverable, RunState, UserRequest
 
 
 def utc_now() -> str:
@@ -46,6 +46,7 @@ class RunStateStore:
                 "run_dir": str(run_dir.resolve()),
                 "state": str((run_dir / "state.json").resolve()),
                 "deliverable": str((run_dir / "deliverable.json").resolve()),
+                "deliverable_text": str((run_dir / "deliverable.txt").resolve()),
             },
         )
         self.record_event(state, "start", "ok", {"created_at": utc_now()})
@@ -89,4 +90,48 @@ class RunStateStore:
         path = Path(state.paths["deliverable"])
         path.write_text(json.dumps(to_jsonable(payload), indent=2), encoding="utf-8")
         return path
+
+    def write_deliverable_text(self, state: RunState, payload: FinalDeliverable) -> Path:
+        path = Path(state.paths["deliverable_text"])
+        path.write_text(self.render_deliverable_text(payload), encoding="utf-8")
+        return path
+
+    def render_deliverable_text(self, payload: FinalDeliverable) -> str:
+        lines = [
+            f"Run ID: {payload.run_id}",
+            f"Route: {payload.route.value}",
+            f"Confidence: {payload.confidence}",
+            "",
+            "Summary:",
+            payload.summary or "(no summary)",
+        ]
+
+        generated_files = payload.structured_output.get("generated_files", {})
+        if isinstance(generated_files, dict) and generated_files:
+            lines.extend(["", "Generated Files:"])
+            for name, location in generated_files.items():
+                lines.append(f"- {name}: {location}")
+
+        if payload.citations:
+            lines.extend(["", "Citations:"])
+            for citation in payload.citations[:8]:
+                title = citation.get("title", "unknown source")
+                source_type = citation.get("source_type", "source")
+                locator = citation.get("location") or citation.get("source_id") or citation.get("excerpt")
+                if locator:
+                    lines.append(f"- {title} [{source_type}]: {locator}")
+                else:
+                    lines.append(f"- {title} [{source_type}]")
+
+        if payload.warnings:
+            lines.extend(["", "Warnings:"])
+            for warning in payload.warnings:
+                lines.append(f"- {warning}")
+
+        if payload.agent_usage:
+            lines.extend(["", "Agent Usage:"])
+            for usage in payload.agent_usage:
+                lines.append(f"- {usage['role']}: {usage['model']} ({usage['status']})")
+
+        return "\n".join(lines).strip() + "\n"
 

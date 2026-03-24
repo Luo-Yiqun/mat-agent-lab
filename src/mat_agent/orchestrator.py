@@ -173,11 +173,22 @@ class MaterialsAgentApp:
             state_path=state.paths["state"],
         )
         deliverable.deliverable_path = state.paths["deliverable"]
+        deliverable.deliverable_text_path = state.paths["deliverable_text"]
         self.state_store.attach_artifact(state, "agent_usage", self.agent_manager.get_usage())
         deliverable_path = self.state_store.write_deliverable(state, deliverable)
         deliverable.deliverable_path = str(deliverable_path.resolve())
+        deliverable_text_path = self.state_store.write_deliverable_text(state, deliverable)
+        deliverable.deliverable_text_path = str(deliverable_text_path.resolve())
         self.state_store.write_deliverable(state, deliverable)
-        self.state_store.record_event(state, "finalize", "ok", {"deliverable": deliverable.deliverable_path})
+        self.state_store.record_event(
+            state,
+            "finalize",
+            "ok",
+            {
+                "deliverable": deliverable.deliverable_path,
+                "deliverable_text": deliverable.deliverable_text_path,
+            },
+        )
         self.state_store.write_state(state)
         return deliverable
 

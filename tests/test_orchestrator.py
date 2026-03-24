@@ -21,10 +21,12 @@ def test_qa_run_writes_deliverable(tmp_path: Path):
 
     assert deliverable.route == TaskRoute.QA
     assert Path(deliverable.deliverable_path).exists()
+    assert Path(deliverable.deliverable_text_path).exists()
     assert deliverable.structured_output["evidence_count"] >= 2
     assert deliverable.structured_output["agent_used"] is False
     assert any(item["role"] == "retrieval_planner" for item in deliverable.agent_usage)
     assert any(item["role"] == "qa_agent" for item in deliverable.agent_usage)
+    assert "Summary:" in Path(deliverable.deliverable_text_path).read_text(encoding="utf-8")
 
 
 def test_pdf_question_returns_direct_answer_with_supporting_references(tmp_path: Path):
@@ -162,6 +164,7 @@ def test_qe_single_point_templates_are_generated_from_structure(tmp_path: Path):
     assert (generated_dir / "qe_scf.in").exists()
     assert (generated_dir / "run_qe.sh").exists()
     assert deliverable.structured_output["generated_files"]["qe_scf.in"].endswith("qe_scf.in")
+    assert "Generated Files:" in Path(deliverable.deliverable_text_path).read_text(encoding="utf-8")
 
 
 def test_qe_single_point_templates_are_generated_with_ai_planner(tmp_path: Path, monkeypatch):

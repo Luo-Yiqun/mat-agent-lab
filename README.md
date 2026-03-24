@@ -10,7 +10,7 @@ This repo contains a runnable application skeleton for the simplified proposal f
 - `src/mat_agent/`: orchestration, routing, AI agents, validators, and CLI
 - `LiteratureReview/`: preserved legacy literature-review workflow
 - `config.json`: local AI gateway config, kept out of git
-- `run-artifacts/`: per-run state snapshots and deliverables
+- `run-artifacts/`: per-run state snapshots plus `deliverable.json` and `deliverable.txt`
 
 ## AI Agents
 
