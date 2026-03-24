@@ -13,6 +13,18 @@ except ImportError:  # pragma: no cover
     PdfReader = None
 
 
+LEGACY_CITATION_KEYWORDS = {
+    "paper",
+    "papers",
+    "citation",
+    "citations",
+    "cited",
+    "literature",
+    "reference",
+    "references",
+}
+
+
 def utc_now() -> str:
     return datetime.now(timezone.utc).isoformat()
 
@@ -44,6 +56,7 @@ class RetrievalPipeline:
             )
             result.coverage["material_id"] = True
             result.artifacts["legacy_literature_review"] = self.legacy_adapter.build_retrieval_handoff(request.material_id)
+            self._attach_legacy_citation_records(request, result)
 
         if request.material_name:
             result.records.append(
@@ -148,4 +161,100 @@ class RetrievalPipeline:
             "missing_information": missing_information if isinstance(missing_information, list) else [],
             "critique": ai_result.get("critique", ""),
         }
+
+    def _attach_legacy_citation_records(self, request: UserRequest, result: RetrievalResult) -> None:
+        if not request.material_id:
+            return
+
+        citation_bundle = self.legacy_adapter.resolve_citing_papers(
+            request.material_id,
+            allow_live=self._should_use_legacy_citations(request),
+        )
+        result.artifacts["legacy_literature_review"] = citation_bundle
+
+        status = citation_bundle.get("status", "prepared")
+        if status == "error":
+            error = citation_bundle.get("error", "legacy cited-paper lookup failed")
+            result.warnings.append(f"legacy LiteratureReview citation lookup failed: {error}")
+            return
+
+        original_papers = citation_bundle.get("original_papers", [])
+        if isinstance(original_papers, list):
+            for index, paper in enumerate(original_papers[:3], start=1):
+                content = self._format_paper_content(paper)
+                if not content:
+                    continue
+                result.records.append(
+                    EvidenceRecord(
+                        title=f"Legacy original paper {index} for {request.material_id}",
+                        content=content,
+                        source_type="legacy-original-paper",
+                        provenance={
+                            "source_id": request.material_id,
+                            "legacy_status": status,
+                            "retrieved_at": utc_now(),
+                        },
+                        metadata=paper if isinstance(paper, dict) else {"value": str(paper)},
+                    )
+                )
+            if original_papers:
+                result.coverage["legacy_original_papers"] = True
+
+        citing_papers = citation_bundle.get("citing_papers", [])
+        if isinstance(citing_papers, list):
+            for paper in citing_papers[:10]:
+                if not isinstance(paper, dict):
+                    continue
+                title = str(paper.get("google_scholar_title") or paper.get("title") or "Legacy cited paper")
+                content = self._format_paper_content(paper)
+                result.records.append(
+                    EvidenceRecord(
+                        title=title,
+                        content=content,
+                        source_type="legacy-cited-paper",
+                        provenance={
+                            "source_id": request.material_id,
+                            "publication_link": paper.get("publication_link"),
+                            "pdf_link": paper.get("pdf_link"),
+                            "legacy_status": status,
+                            "retrieved_at": utc_now(),
+                        },
+                        metadata=paper,
+                    )
+                )
+            if citing_papers:
+                result.coverage["legacy_cited_papers"] = True
+            elif status == "prepared":
+                result.warnings.append(
+                    "Legacy LiteratureReview citation backend is selected for this task, but no cached cited papers were found."
+                )
+
+    def _should_use_legacy_citations(self, request: UserRequest) -> bool:
+        task = (request.task or "").lower()
+        return any(keyword in task for keyword in LEGACY_CITATION_KEYWORDS)
+
+    def _format_paper_content(self, paper: object) -> str:
+        if isinstance(paper, str):
+            return paper
+        if not isinstance(paper, dict):
+            return str(paper)
+
+        parts: list[str] = []
+        for key in (
+            "google_scholar_title",
+            "title",
+            "authors",
+            "journal",
+            "year",
+            "doi",
+            "google_scholar_snippet",
+            "abstract",
+            "publication_link",
+            "pdf_link",
+        ):
+            value = paper.get(key)
+            if value:
+                label = key.replace("_", " ")
+                parts.append(f"{label}: {value}")
+        return "\n".join(parts)
 

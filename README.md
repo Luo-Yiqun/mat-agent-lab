@@ -28,7 +28,7 @@ If AI is unavailable or disabled, the app falls back to deterministic behavior a
 Each AI agent is given a constrained tool/context bundle rather than arbitrary repo access:
 
 - `retrieval_planner` in `src/mat_agent/pipelines/retrieval.py`
-  tools: `local_file_reader`, `pdf_text_extractor`, `legacy_literature_review_handoff`
+  tools: `local_file_reader`, `pdf_text_extractor`, `legacy_literature_review_backend`
 - `qa_agent` in `src/mat_agent/pipelines/qa.py`
   tools: `grounded_evidence_bundle`, `citation_pack`
 - `simulation_planner` in `src/mat_agent/pipelines/simulation.py`
@@ -49,7 +49,7 @@ The CLI supports six main workflow shapes.
 
 ### 1. CSD reference code => cited papers
 
-This routes through retrieval and QA, and prepares the legacy `LiteratureReview` handoff for citation discovery.
+This routes through retrieval and QA, and uses the legacy `LiteratureReview` cited-paper backend. It reads cached results from `LiteratureReview/citing.json` first and, when the legacy environment is available, can fall through to the original `CCDCCitingPaper` workflow.
 
 ```powershell
 $env:PYTHONPATH='src'
@@ -58,6 +58,12 @@ python -m mat_agent `
   --material-id BENZEN `
   --route qa
 ```
+
+Legacy backend prerequisites for live lookup:
+
+- CCDC Python API
+- Selenium
+- Chrome/Chromedriver available to the legacy workflow
 
 ### 2. CSD reference code => FHI-aims SPE calculation scripts
 

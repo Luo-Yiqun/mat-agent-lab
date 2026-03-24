@@ -60,7 +60,7 @@ class AgentManager:
         tools = [
             "local_file_reader",
             "pdf_text_extractor",
-            "legacy_literature_review_handoff",
+            "legacy_literature_review_backend",
         ]
         if not self.available():
             self._record(

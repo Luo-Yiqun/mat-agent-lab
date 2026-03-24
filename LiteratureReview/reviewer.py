@@ -388,7 +388,9 @@ class LLMReviewer(Reviewer):
     """
     # Optimized prompts for LLMReviewer
     static_prompt_exp = (
-        "You are an expert literature reviewer in materials science. "
+        "You are the legacy literature-review sub-agent inside a broader multi-agent materials workflow. "
+        "Your job here is paper-grounded screening and extraction for a target polymorph identified by CSD reference code, SMILES, or related context. "
+        "You may support downstream tasks such as cited-paper discovery, question answering, and simulation preparation, but in this legacy step you must only judge and extract evidence from the current paper. "
         "Given a paper (text only), assess if it meets ALL of these criteria:\n"
         "1. The paper reports experimental (not theoretical or computational) work on a specific polymorph.\n"
         "2. The material is in an allowed phase:\n"
@@ -404,6 +406,8 @@ class LLMReviewer(Reviewer):
         "\n"
         "Instructions:\n"
         "- Use only the information provided. Do not assume beyond the text except for the Assumption rule above.\n"
+        "- Treat this as a cited-paper evidence extraction task, not an open-ended chat task.\n"
+        "- Prefer explicit, auditable evidence that can later support grounded answers in the larger workflow.\n"
         "- If information is missing or ambiguous, do not guess (other than the Assumption rule).\n"
         "- Be concise and objective in your evaluation."
     )
@@ -414,6 +418,7 @@ class LLMReviewer(Reviewer):
         "1. It is an experimental paper about the given polymorph.\n"
         "2. The material is in an allowed phase (not solution).\n"
         "3. The paper discusses at least one of the relevant properties.\n"
+        "This score is used to decide whether the paper should continue in the cited-paper extraction workflow.\n"
         "Respond with only the confidence score as a number between 0 and 1."
     )
     first_prompt_exp_schema = {
@@ -423,7 +428,7 @@ class LLMReviewer(Reviewer):
     }
     second_prompt_exp = (
         "The previous confidence score exceeded the threshold.\n"
-        "Now, extract the following experimental results for the polymorph of interest, and return a STRICT JSON object with EXACTLY these keys:\n"
+        "Now, extract the following experimental results for the polymorph of interest so they can support downstream question answering and reporting, and return a STRICT JSON object with EXACTLY these keys:\n"
         "['confidence_score', 'density_of_state', 'absorption_spectrum', 'optical_gap', 'optical_gap_source']\n"
         "Instructions:\n"
         "- Use ONLY the provided material. Do NOT include theoretical or computational results. Do NOT infer or guess beyond the text.\n"
@@ -431,6 +436,7 @@ class LLMReviewer(Reviewer):
         "  If the paper mentions the technique (e.g., 'absorption spectroscopy') but does NOT provide a specific figure/table/scheme reference, return null.\n"
         "- If a field is not explicitly mentioned, return null (the JSON literal).\n"
         "- Only include results for the specified polymorph; ignore other polymorphs.\n"
+        "- Prefer evidence that is precise enough to be cited later in a final answer.\n"
         "- Output STRICTLY valid JSON (double-quoted keys/strings, no trailing commas), and NOTHING else."
     )
     second_prompt_exp_schema = {
@@ -468,7 +474,9 @@ class LLMReviewer(Reviewer):
     }
 
     static_prompt_calc = (
-        "You are an expert literature reviewer in materials science. "
+        "You are the legacy literature-review sub-agent inside a broader multi-agent materials workflow. "
+        "Your role here is paper-grounded screening and extraction for a target polymorph identified by CSD reference code, SMILES, or related context. "
+        "You may support downstream tasks such as cited-paper discovery, question answering, and simulation preparation, but in this legacy step you must only judge and extract computational evidence from the current paper. "
         "Given a paper (text only), assess if it meets ALL of these criteria:\n"
         "1. The paper reports at least one of the following computational results (not experimental):\n"
         "   - GW approximation (GWA)\n"
@@ -480,6 +488,8 @@ class LLMReviewer(Reviewer):
         "\n"
         "Instructions:\n"
         "- Use only the provided information. Do not infer beyond the text except for the Assumption rule above.\n"
+        "- Treat this as a cited-paper evidence extraction task, not an open-ended chat task.\n"
+        "- Prefer explicit, auditable computational evidence that can later support grounded answers in the larger workflow.\n"
         "- If information is missing or ambiguous, do not guess (other than the Assumption rule).\n"
         "- Be concise and objective."
     )
@@ -489,6 +499,7 @@ class LLMReviewer(Reviewer):
         "for whether the paper meets ALL of the following:\n"
         "1. It is a computational paper that reports at least one of the computational results (not experimental):\n"
         "2. The paper is on the specific polymorph (not molecule).\n"
+        "This score is used to decide whether the paper should continue in the cited-paper extraction workflow.\n"
         "Respond with only the confidence score as a number between 0 and 1."
     )
     first_prompt_calc_schema = {
@@ -498,12 +509,13 @@ class LLMReviewer(Reviewer):
     }
     second_prompt_calc = (
         "The previous confidence score exceeded the threshold. "
-        "Now, extract the following computational results for the polymorph of interest, and return a STRICT JSON object with EXACTLY these keys:\n"
+        "Now, extract the following computational results for the polymorph of interest so they can support downstream question answering and reporting, and return a STRICT JSON object with EXACTLY these keys:\n"
         "['confidence_score', 'bse_gap', 'bse_gap_source', 'other_gw_bse_results']\n"
         "Instructions:\n"
         "- Include ONLY computational GW/BSE evidence; EXCLUDE experimental results. Do not infer or guess beyond the text.\n"
         "- Consider ONLY the specified polymorph; ignore other polymorphs.\n"
         "- If a field is not explicitly supported by the text, use null (or [] for the list).\n"
+        "- Prefer evidence that is precise enough to be cited later in a final answer.\n"
         "- Output STRICTLY valid JSON (double-quoted keys/strings, no trailing commas), and NOTHING else."
     )
     second_prompt_calc_schema = {

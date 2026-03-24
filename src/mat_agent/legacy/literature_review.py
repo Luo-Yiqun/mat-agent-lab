@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import importlib.util
+import json
+import sys
 from pathlib import Path
 from typing import Any
 
@@ -8,6 +10,7 @@ from typing import Any
 class LegacyLiteratureReviewAdapter:
     def __init__(self, root: str | Path = "LiteratureReview") -> None:
         self.root = Path(root)
+        self.citing_json = self.root / "citing.json"
 
     def describe_assets(self) -> dict[str, Any]:
         expected_files = [
@@ -34,6 +37,7 @@ class LegacyLiteratureReviewAdapter:
             "openai",
             "tqdm",
             "pypdf",
+            "ccdc",
         ]
         return {
             "has_citer_module": (self.root / "citer.py").exists(),
@@ -55,3 +59,124 @@ class LegacyLiteratureReviewAdapter:
             ),
             "environment": self.diagnose_environment(),
         }
+
+    def resolve_citing_papers(self, material_id: str, allow_live: bool = False) -> dict[str, Any]:
+        cached = self._load_cached_citing_papers(material_id)
+        if cached is not None:
+            return {
+                "material_id": material_id,
+                "legacy_root": str(self.root.resolve()),
+                "backend": "LiteratureReview.CCDCCitingPaper",
+                "status": "cached",
+                "source_json": str(self.citing_json.resolve()),
+                "original_papers": cached.get("original_papers", []),
+                "citing_papers": cached.get("citing_papers", []),
+                "environment": self.diagnose_environment(),
+            }
+
+        if not allow_live:
+            return {
+                "material_id": material_id,
+                "legacy_root": str(self.root.resolve()),
+                "backend": "LiteratureReview.CCDCCitingPaper",
+                "status": "prepared",
+                "source_json": str(self.citing_json.resolve()),
+                "original_papers": [],
+                "citing_papers": [],
+                "note": "Legacy cited-paper backend is available for this task, but no cached results were found.",
+                "environment": self.diagnose_environment(),
+            }
+
+        return self._run_live_citing_paper_lookup(material_id)
+
+    def _load_cached_citing_papers(self, material_id: str) -> dict[str, Any] | None:
+        if not self.citing_json.exists():
+            return None
+
+        data = json.loads(self.citing_json.read_text(encoding="utf-8"))
+        entry = data.get(material_id)
+        if not isinstance(entry, dict):
+            return None
+        return entry
+
+    def _run_live_citing_paper_lookup(self, material_id: str) -> dict[str, Any]:
+        environment = self.diagnose_environment()
+        try:
+            citer_module = self._load_legacy_module("citer.py", "legacy_literature_review_citer")
+            webdriver = getattr(citer_module, "webdriver")
+            service_cls = getattr(citer_module, "Service")
+            options = webdriver.ChromeOptions()
+            driver = None
+            chromedriver_path = self._detect_chromedriver_path()
+            try:
+                if chromedriver_path:
+                    driver = webdriver.Chrome(service=service_cls(chromedriver_path), options=options)
+                else:
+                    driver = webdriver.Chrome(options=options)
+
+                citer = citer_module.CCDCCitingPaper(
+                    refcode=material_id,
+                    driver=driver,
+                    json_file=str(self.citing_json),
+                )
+                citer.get_original_papers()
+                citing_papers = citer.citer(False)
+                return {
+                    "material_id": material_id,
+                    "legacy_root": str(self.root.resolve()),
+                    "backend": "LiteratureReview.CCDCCitingPaper",
+                    "status": "fetched",
+                    "source_json": str(self.citing_json.resolve()),
+                    "original_papers": list(citer.original_papers),
+                    "citing_papers": list(citing_papers or []),
+                    "environment": environment,
+                }
+            finally:
+                if driver is not None:
+                    try:
+                        driver.quit()
+                    except Exception:
+                        pass
+        except Exception as exc:
+            return {
+                "material_id": material_id,
+                "legacy_root": str(self.root.resolve()),
+                "backend": "LiteratureReview.CCDCCitingPaper",
+                "status": "error",
+                "source_json": str(self.citing_json.resolve()),
+                "original_papers": [],
+                "citing_papers": [],
+                "error": f"{exc.__class__.__name__}: {exc}",
+                "environment": environment,
+            }
+
+    def _load_legacy_module(self, filename: str, module_name: str):
+        module_path = self.root / filename
+        spec = importlib.util.spec_from_file_location(module_name, module_path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Unable to load legacy module {module_path}")
+
+        module = importlib.util.module_from_spec(spec)
+        root_path = str(self.root.resolve())
+        inserted = False
+        if root_path not in sys.path:
+            sys.path.insert(0, root_path)
+            inserted = True
+        try:
+            spec.loader.exec_module(module)
+        finally:
+            if inserted:
+                sys.path.remove(root_path)
+        return module
+
+    def _detect_chromedriver_path(self) -> str | None:
+        candidates = [
+            Path("chromedriver.exe"),
+            Path("chromedriver"),
+            self.root / "chromedriver.exe",
+            self.root / "chromedriver",
+        ]
+        for candidate in candidates:
+            if candidate.exists():
+                return str(candidate.resolve())
+        return None
