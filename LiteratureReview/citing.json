@@ -1,0 +1,123 @@
+{
+    "BENZEN": {
+        "refcodes": [
+            "BENZEN",
+            "BENZEN01",
+            "BENZEN02",
+            "BENZEN06",
+            "BENZEN07",
+            "BENZEN11",
+            "BENZEN12",
+            "BENZEN13",
+            "BENZEN14",
+            "BENZEN15",
+            "BENZEN18",
+            "BENZEN19",
+            "BENZEN20",
+            "BENZEN22",
+            "BENZEN25",
+            "BENZEN26"
+        ],
+        "original_papers": [
+            {
+                "refcode": "BENZEN",
+                "authors": "G.E.Bacon, N.A.Curry, S.A.Wilson",
+                "journal": "Proceedings of the Royal Society London,Series A [1996-2019]",
+                "volume": "279",
+                "year": "1964",
+                "first_page": "98",
+                "doi": "10.1098/rspa.1964.0092"
+            },
+            {
+                "refcode": "BENZEN02",
+                "authors": "E.G.Cox, D.W.J.Cruickshank, J.A.S.Smith",
+                "journal": "Proceedings of the Royal Society London,Series A [1996-2019]",
+                "volume": "247",
+                "year": "1958",
+                "first_page": "1",
+                "doi": "10.1098/rspa.1958.0167"
+            },
+            {
+                "refcode": "BENZEN06",
+                "authors": "G.A.Jeffrey, J.R.Ruble, R.K.McMullan, J.A.Pople",
+                "journal": "Proceedings of the Royal Society London,Series A [1996-2019]",
+                "volume": "414",
+                "year": "1987",
+                "first_page": "47",
+                "doi": "10.1098/rspa.1987.0132"
+            },
+            {
+                "refcode": "BENZEN11",
+                "authors": "A.Budzianowski, A.Katrusiak",
+                "journal": "Acta Crystallographica,Section B: Structural Science [1983-2012]",
+                "volume": "62",
+                "year": "2006",
+                "first_page": "94",
+                "doi": "10.1107/S010876810503747X"
+            },
+            {
+                "refcode": "BENZEN14",
+                "authors": "W.I.F.David, R.M.Ibberson, G.A.Jeffrey, J.R.Ruble",
+                "journal": "Physica B: Condensed Matter (Amsterdam)",
+                "volume": "180",
+                "year": "1992",
+                "first_page": "597",
+                "doi": "10.1016/0921-4526(92)90406-I"
+            },
+            {
+                "refcode": "BENZEN15",
+                "authors": "A.Katrusiak, M.Podsiadlo, A.Budzianowski",
+                "journal": "Crystal Growth and Design",
+                "volume": "10",
+                "year": "2010",
+                "first_page": "3461",
+                "doi": "10.1021/cg1002594"
+            },
+            {
+                "refcode": "BENZEN18",
+                "authors": "S.K.Nayak, R.Sathishkumar, T.N.G.Row",
+                "journal": "CrystEngComm",
+                "volume": "12",
+                "year": "2010",
+                "first_page": "3112",
+                "doi": "10.1039/c001190h"
+            },
+            {
+                "refcode": "BENZEN19",
+                "authors": "H.E.Maynard-Casely, R.Hodyss, M.L.Cable, T.H.Vu, M.Rahm",
+                "journal": "IUCrJ",
+                "volume": "3",
+                "year": "2016",
+                "first_page": "192",
+                "doi": "10.1107/S2052252516002815"
+            },
+            {
+                "refcode": "BENZEN20",
+                "authors": "M.Woinska, S.Grabowsky, P.M.Dominiak, K.Wozniak, D.Jayatilaka",
+                "journal": "Science Advances",
+                "volume": "2",
+                "year": "2016",
+                "first_page": "e1600192",
+                "doi": "10.1126/sciadv.1600192"
+            },
+            {
+                "refcode": "BENZEN22",
+                "authors": "A.D.Chanyshev, K.D.Litasov, S.V.Rashchenko, A.Sano-Furukawa, H.Kagi, T.Hattori, A.F.Shatskiy, A.M.Dymshits, I.S.Sharygin, Yuji Higo",
+                "journal": "Crystal Growth and Design",
+                "volume": "18",
+                "year": "2018",
+                "first_page": "3016",
+                "doi": "10.1021/acs.cgd.8b00125"
+            },
+            {
+                "refcode": "BENZEN25",
+                "authors": "M.Bujak, N.W.Mitzel",
+                "journal": "CSD Communication",
+                "volume": "",
+                "year": "2018",
+                "first_page": "",
+                "doi": null
+            }
+        ]
+    }
+}

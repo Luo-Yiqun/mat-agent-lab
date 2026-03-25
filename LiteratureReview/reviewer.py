@@ -989,7 +989,7 @@ class LLMReviewer(Reviewer):
         return rag_snippets
 
 
-    def search_text(self, model: str, exp_calc: Literal["exp", "calc"], prompt: str, schema: dict) -> str:
+    def search_text(self, model: str, exp_calc: Literal["exp", "calc", None], prompt: str, schema: dict) -> str:
         """
         Search the given URL for relevant information using the OpenAI API.
         Returns the reply from the OpenAI API.
