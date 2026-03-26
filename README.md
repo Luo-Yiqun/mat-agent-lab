@@ -1,5 +1,5 @@
 # mat-agent-lab
-11766 LLM Applications course project: Multi-Agent Framework for Autonomous Computational Materials Analysis.
+Multi-Agent Framework for Autonomous Computational Materials Analysis.
 
 This repo contains a runnable application skeleton for the simplified proposal flow:
 
@@ -121,7 +121,7 @@ Generated files currently include:
 - `supporting_references.txt`
 - `citations.json`
 
-### 5. Input generation => QE or FHI-aims files
+### 5. Structure file => DFT scripts
 
 There are two related input-generation entry points:
 
