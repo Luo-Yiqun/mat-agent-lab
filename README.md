@@ -177,6 +177,34 @@ $env:PYTHONPATH='src'
 python -m mat_agent --task "Extract cited papers for BENZEN" --material-id BENZEN --no-ai
 ```
 
+## Web UI
+
+A local web interface is available that exposes all CLI workflows through a browser.
+
+### Setup
+
+Install Flask if you haven't already:
+
+```bash
+pip install flask
+```
+
+### Launch
+
+```bash
+PYTHONPATH=src python web/app.py
+```
+
+Then open **http://localhost:5000** in your browser.
+
+### Features
+
+- **Run Agent tab** — covers all five CLI workflow shapes (CSD cited papers, FHI-aims scripts, QA over materials, PDFs → band gap, structure → DFT scripts). A preset sidebar auto-fills the form for each example.
+- **Generate Input File tab** — exposes the `python -m mat_agent.input_file_generator` few-shot generator for FHI-aims and Quantum ESPRESSO.
+- Drag-and-drop upload for PDF papers and structure files.
+- Live results panel with tabs: Summary, Files (preview + download), Citations, Agents, raw JSON.
+- Confidence bar, warnings display, and per-agent status (used / skipped / fallback).
+
 ## Testing
 
 ```powershell
