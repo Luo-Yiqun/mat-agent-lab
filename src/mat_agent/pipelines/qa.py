@@ -74,7 +74,7 @@ class QAPipeline:
             direct_answer = str(ai_result.get("direct_answer", "")).strip() or str(ai_result.get("answer", "")).strip()
             return QAResult(
                 answer=self._compose_answer_text(direct_answer, supporting_references),
-                citations=ai_result.get("citations", citations) if isinstance(ai_result.get("citations", citations), list) else citations,
+                citations=self._normalize_citations(ai_result.get("citations"), fallback=citations),
                 structured_output={
                     "task": request.task,
                     "evidence_count": len(retrieval.records),
@@ -106,6 +106,17 @@ class QAPipeline:
             structured_output=structured_output,
             confidence=round(confidence, 3),
         )
+
+    def _normalize_citations(self, value: object, fallback: list[dict]) -> list[dict]:
+        if not isinstance(value, list):
+            return fallback
+        result: list[dict] = []
+        for item in value:
+            if isinstance(item, dict):
+                result.append(item)
+            elif isinstance(item, str) and item.strip():
+                result.append({"title": item.strip(), "source_type": "ai-citation"})
+        return result if result else fallback
 
     def _normalize_confidence(self, value: object) -> float:
         if isinstance(value, bool):
