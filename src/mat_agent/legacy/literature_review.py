@@ -66,7 +66,9 @@ class LegacyLiteratureReviewAdapter:
 
     def resolve_citing_papers(self, material_id: str, allow_live: bool = False) -> dict[str, Any]:
         cached = self._load_cached_citing_papers(material_id)
-        if cached is not None:
+        # Only use cache when citing_papers are present, or when live lookup is disabled.
+        # An empty citing_papers with allow_live=True means we should try the live backend.
+        if cached is not None and (cached.get("citing_papers") or not allow_live):
             return {
                 "material_id": material_id,
                 "legacy_root": str(self.root.resolve()),
@@ -85,7 +87,7 @@ class LegacyLiteratureReviewAdapter:
                 "backend": "LiteratureReview.CCDCCitingPaper",
                 "status": "prepared",
                 "source_json": str(self.citing_json.resolve()),
-                "original_papers": [],
+                "original_papers": cached.get("original_papers", []) if cached else [],
                 "citing_papers": [],
                 "note": "Legacy cited-paper backend is available for this task, but no cached results were found.",
                 "environment": self.diagnose_environment(),
@@ -127,17 +129,15 @@ class LegacyLiteratureReviewAdapter:
                 driver_error = f"{exc.__class__.__name__}: {exc}"
 
             try:
-                if driver is not None:
-                    citer = citer_module.CCDCCitingPaper(
-                        refcode=material_id,
-                        driver=driver,
-                        json_file=str(self.citing_json),
-                    )
-                else:
-                    citer = citer_module.CCDCCitingPaper(
-                        refcode=material_id,
-                        json_file=str(self.citing_json),
-                    )
+                citer = citer_module.CCDCCitingPaper(
+                    refcode=material_id,
+                    driver=driver,
+                    json_file=str(self.citing_json),
+                )
+                # The constructor only sets self.driver when driver is not None.
+                # Guard so citer() doesn't crash with AttributeError when driver=None.
+                if not hasattr(citer, "driver"):
+                    citer.driver = driver
                 citer.get_original_papers()
                 citing_papers = citer.citer(False)
                 result = {
@@ -193,6 +193,14 @@ class LegacyLiteratureReviewAdapter:
         return module
 
     def _detect_chromedriver_path(self) -> str | None:
+        # Prefer webdriver_manager so the driver version always matches the installed Chrome.
+        try:
+            from webdriver_manager.chrome import ChromeDriverManager  # type: ignore
+
+            return ChromeDriverManager().install()
+        except Exception:
+            pass
+
         env_candidates = [
             os.environ.get("MAT_AGENT_CHROMEDRIVER"),
             os.environ.get("CHROMEDRIVER"),
