@@ -46,7 +46,7 @@ class QAPipeline:
     def run(self, request: UserRequest, retrieval: RetrievalResult) -> QAResult:
         citations = []
         evidence_payload = []
-        for record in retrieval.records[:5]:
+        for record in retrieval.records:
             citations.append(
                 {
                     "title": record.title,
