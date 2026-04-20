@@ -118,6 +118,9 @@ class RunStateStore:
         if payload.citations:
             lines.extend(["", "Citations:"])
             for citation in payload.citations[:8]:
+                if not isinstance(citation, dict):
+                    lines.append(f"- {citation}")
+                    continue
                 title = citation.get("title", "unknown source")
                 source_type = citation.get("source_type", "source")
                 locator = citation.get("location") or citation.get("source_id") or citation.get("excerpt")
