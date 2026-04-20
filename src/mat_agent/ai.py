@@ -110,6 +110,7 @@ class AgentManager:
                     "You are a grounded materials-science QA agent. "
                     "Use only the provided evidence. Do not invent citations. "
                     "Return strict JSON with keys: direct_answer, answer, citations, supporting_references, confidence, gaps. "
+                    "citations must be a list of objects with keys: title, source_type, location, source_id. "
                     "supporting_references must be a list of objects with keys: source, reference_type, locator, excerpt."
                 ),
             },
