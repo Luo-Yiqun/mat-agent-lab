@@ -223,7 +223,7 @@ class RetrievalPipeline:
                 )
             if citing_papers:
                 result.coverage["legacy_cited_papers"] = True
-            elif status == "prepared":
+            elif self._should_use_legacy_citations(request):
                 result.warnings.append(
                     "Legacy LiteratureReview citation backend is selected for this task, but no cached cited papers were found."
                 )
