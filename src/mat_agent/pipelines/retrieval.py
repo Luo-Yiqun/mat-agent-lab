@@ -55,7 +55,6 @@ class RetrievalPipeline:
                 )
             )
             result.coverage["material_id"] = True
-            result.artifacts["legacy_literature_review"] = self.legacy_adapter.build_retrieval_handoff(request.material_id)
             self._attach_legacy_citation_records(request, result)
 
         if request.material_name:
