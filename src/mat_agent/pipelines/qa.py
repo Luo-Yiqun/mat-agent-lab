@@ -60,7 +60,7 @@ class QAPipeline:
                     "title": record.title,
                     "source_type": record.source_type,
                     "provenance": record.provenance,
-                    "snippet": " ".join(record.content.split())[:3000],
+                    "snippet": self._smart_snippet(record.content, request.task),
                 }
             )
 
@@ -106,6 +106,32 @@ class QAPipeline:
             structured_output=structured_output,
             confidence=round(confidence, 3),
         )
+
+    def _smart_snippet(self, content: str, task: str, char_limit: int = 12000) -> str:
+        """Return evidence snippet: full text if short, else first block + relevant sentences."""
+        normalized = " ".join(content.split())
+        if len(normalized) <= char_limit:
+            return normalized
+
+        task_lower = task.lower()
+        is_gap_task = any(kw in task_lower for kw in ("band gap", "optical gap", "gap", "eV", "ev"))
+
+        relevant: list[str] = []
+        for sent in SENTENCE_SPLIT_PATTERN.split(content):
+            stripped = " ".join(sent.split())
+            if not stripped:
+                continue
+            if EV_PATTERN.search(stripped) or (
+                is_gap_task
+                and any(kw in stripped.lower() for kw in ("band gap", "optical gap", "gap"))
+            ):
+                relevant.append(stripped)
+
+        first_block = normalized[:4000]
+        if relevant:
+            combined = first_block + "\n\n[Key excerpts from full paper:]\n" + "\n".join(relevant)
+            return combined[:char_limit]
+        return normalized[:char_limit]
 
     def _normalize_citations(self, value: object, fallback: list[dict]) -> list[dict]:
         if not isinstance(value, list):
