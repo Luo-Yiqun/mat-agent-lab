@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(PYTHONPATH=src python -m mat_agent --task \"Find cited papers for CSD reference code BENZEN\" --material-id BENZEN --route qa)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(PYTHONPATH='src' python -m mat_agent --task \"Find cited papers for CSD reference code BENZEN\" --material-id BENZEN --route qa)",
+      "Bash(PYTHONPATH='src' python -m pytest tests/ -x -q)"
+    ]
+  }
+}

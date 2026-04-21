@@ -57,7 +57,7 @@ This routes through retrieval and QA, and uses the legacy `LiteratureReview` cit
 ```powershell
 $env:PYTHONPATH='src'
 python -m mat_agent `
-  --task "Find cited papers for CSD reference code BENZEN" `
+  --task "Find 3 citing papers for CSD reference code BENZEN" `
   --material-id BENZEN `
   --route qa
 ```

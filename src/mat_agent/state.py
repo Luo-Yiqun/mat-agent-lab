@@ -83,11 +83,13 @@ class RunStateStore:
 
     def write_state(self, state: RunState) -> Path:
         path = Path(state.paths["state"])
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.to_pretty_json(state), encoding="utf-8")
         return path
 
     def write_deliverable(self, state: RunState, payload: Any) -> Path:
         path = Path(state.paths["deliverable"])
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.to_pretty_json(payload), encoding="utf-8")
         return path
 
@@ -96,6 +98,7 @@ class RunStateStore:
 
     def write_deliverable_text(self, state: RunState, payload: FinalDeliverable) -> Path:
         path = Path(state.paths["deliverable_text"])
+        path.parent.mkdir(parents=True, exist_ok=True)
         path.write_text(self.render_deliverable_text(payload), encoding="utf-8")
         return path
 
