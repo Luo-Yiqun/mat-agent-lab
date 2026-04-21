@@ -68,41 +68,10 @@ Legacy backend prerequisites for live lookup:
 - Selenium
 - Chrome/Chromedriver available to the legacy workflow
 
-### 2. CSD reference code => FHI-aims SPE calculation scripts
+If one has liscence to some database, such as CCDC, one could further extend the pipline to generate software inputs.
 
-This routes through simulation planning and writes placeholder FHI-aims single-point files into `run-artifacts/<run_id>/generated/`.
 
-```powershell
-$env:PYTHONPATH='src'
-python -m mat_agent `
-  --task "Generate FHI-aims single-point energy calculation scripts" `
-  --material-id BENZEN `
-  --software fhi-aims `
-  --route simulation
-```
-
-Generated files currently include:
-
-- `geometry.in`
-- `control.in`
-- `run_fhi_aims.sh`
-
-The CLI prints the generated file paths after the run completes.
-
-### 3. CSD reference code + question => answer
-
-This keeps the material identifier in context and answers through the QA route.
-
-```powershell
-$env:PYTHONPATH='src'
-python -m mat_agent `
-  --task "What are the cited papers and likely optical-gap evidence for BENZEN?" `
-  --material-id BENZEN `
-  --route qa `
-  --json
-```
-
-### 4. Papers in PDF + question => answer
+### 2. Papers in PDF + question => answer
 
 This loads one or more local PDFs, prints a direct answer plus supporting figure/table/sentence references, and writes QA artifacts into `run-artifacts/<run_id>/generated/`.
 
@@ -110,8 +79,8 @@ This loads one or more local PDFs, prints a direct answer plus supporting figure
 $env:PYTHONPATH='src'
 python -m mat_agent `
   --task "What is the reported band gap in these papers?" `
-  --paper .\papers\paper1.pdf `
-  --paper .\papers\paper2.pdf `
+  --paper .\papers\paper3.pdf `
+  --paper .\papers\paper4.pdf `
   --route qa
 ```
 
@@ -121,7 +90,8 @@ Generated files currently include:
 - `supporting_references.txt`
 - `citations.json`
 
-### 5. Structure file => DFT scripts
+
+### 3. Structure file => DFT scripts
 
 There are two related input-generation entry points:
 
