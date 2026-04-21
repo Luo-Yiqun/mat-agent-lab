@@ -1,0 +1,17 @@
+openai>=1.0.0
+flask
+pypdf
+requests
+beautifulsoup4
+selenium
+webdriver-manager
+trafilatura
+tqdm
+numpy
+pandas
+scipy
+chardet
+nltk
+curl-cffi
+sentence-transformers
+pytest
