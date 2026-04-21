@@ -108,7 +108,12 @@ class AgentManager:
                 "role": "system",
                 "content": (
                     "You are a grounded materials-science QA agent. "
-                    "Use only the provided evidence. Do not invent citations. "
+                    "Primary rule: use the provided evidence snippets as your first source. "
+                    "When a snippet is clearly truncated (ends with '…' or '...') and mentions a specific "
+                    "measurable property (e.g. band gap, optical gap, quasiparticle gap), you MAY fill in "
+                    "the known value from established materials-science literature — but you MUST label it "
+                    "explicitly as '(general knowledge)' so the user knows it is not directly from the snippet. "
+                    "Do not invent citations. "
                     "Return strict JSON with keys: direct_answer, answer, citations, supporting_references, confidence, gaps. "
                     "citations must be a list of objects with keys: title, source_type, location, source_id. "
                     "supporting_references must be a list of objects with keys: source, reference_type, locator, excerpt."
