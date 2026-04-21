@@ -9,7 +9,6 @@
   <style>
     body { background-color: #0a0f1e; }
     .file-drop-active { border-color: #818cf8 !important; background-color: rgba(99,102,241,0.08) !important; }
-    .rtab.active { color: #a5b4fc; border-bottom-color: #6366f1; }
     pre { white-space: pre-wrap; word-break: break-word; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: #1e293b; }
@@ -19,6 +18,8 @@
     .pulse { animation: pulse 2s cubic-bezier(0.4,0,0.6,1) infinite; }
     @keyframes pulse { 0%,100% { opacity:1; } 50% { opacity:.4; } }
     .conf-bar { transition: width 0.6s ease; }
+    .panel-result { max-height: 0; overflow: hidden; transition: max-height 0.4s ease; }
+    .panel-result.open { max-height: 9999px; }
   </style>
 </head>
 <body class="text-slate-100 min-h-screen font-sans">
@@ -45,403 +46,350 @@
   </div>
 </header>
 
-<!-- ───────── MAIN TABS ───────── -->
-<div class="bg-slate-900/80 border-b border-slate-700/60">
-  <div class="max-w-screen-xl mx-auto px-6 flex gap-1">
-    <button onclick="switchTab('agent')" id="tab-agent"
-      class="main-tab px-5 py-3 text-sm font-medium border-b-2 border-indigo-500 text-indigo-400 transition-colors">
-      <i class="fa-solid fa-robot mr-2"></i>Run Agent
-    </button>
-    <button onclick="switchTab('generator')" id="tab-generator"
-      class="main-tab px-5 py-3 text-sm font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors">
-      <i class="fa-solid fa-file-code mr-2"></i>Generate Input File
-    </button>
-  </div>
+<!-- ───────── INTRO ───────── -->
+<div class="max-w-screen-xl mx-auto px-4 pt-6 pb-2 text-center">
+  <p class="text-sm text-slate-500">Three independent workflows — fill in a panel and click Run to get results directly below it.</p>
 </div>
 
 <!-- ═══════════════════════════════════════════
-     PANE: RUN AGENT
+     THREE-PANEL GRID
 ═══════════════════════════════════════════ -->
-<div id="pane-agent" class="max-w-screen-xl mx-auto px-4 py-5">
-  <div class="flex gap-5">
+<div class="max-w-screen-xl mx-auto px-4 py-5 grid grid-cols-1 lg:grid-cols-3 gap-5 items-start">
 
-    <!-- LEFT: Presets -->
-    <div class="w-56 flex-shrink-0 hidden lg:block">
-      <p class="text-xs font-semibold text-slate-500 uppercase tracking-wider mb-3 px-1">Quick Presets</p>
-      <div id="presets-list" class="space-y-2"></div>
+  <!-- ══════════════════════════════════
+       PANEL 1 · CSD → Cited Papers
+  ══════════════════════════════════ -->
+  <div class="flex flex-col gap-4">
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur">
+
+      <!-- Panel header -->
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-8 h-8 bg-blue-700/50 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-book text-blue-300 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white">CSD Reference → Cited Papers</h2>
+          <p class="text-xs text-slate-500">Find papers citing a CSD structure code</p>
+        </div>
+      </div>
+      <div class="border-t border-slate-700/40 my-4"></div>
+
+      <form onsubmit="submitCSD(event)" novalidate>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            CSD Reference Code <span class="text-red-400 normal-case font-normal">required</span>
+          </label>
+          <input type="text" id="csd-code" placeholder="e.g. BENZEN, AABHTZ…"
+            class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Number of Papers</label>
+          <select id="csd-count"
+            class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none">
+            <option value="3">3 papers</option>
+            <option value="5">5 papers</option>
+            <option value="10">10 papers</option>
+          </select>
+        </div>
+
+        <div class="flex items-center gap-3 mb-5 px-1">
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <div class="relative" onclick="toggleAI('csd')">
+              <div id="csd-track" class="w-10 h-5 bg-indigo-600 rounded-full transition-colors"></div>
+              <div id="csd-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" style="transform:translateX(20px)"></div>
+            </div>
+            <span class="text-xs text-slate-400">Enable AI</span>
+          </label>
+        </div>
+
+        <button type="submit" id="csd-btn"
+          class="w-full bg-blue-600 hover:bg-blue-500 active:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-blue-900/30 text-sm">
+          <i class="fa-solid fa-magnifying-glass"></i>Find Cited Papers
+        </button>
+      </form>
     </div>
 
-    <!-- CENTER: Form -->
-    <div class="flex-1 min-w-0">
-      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 backdrop-blur">
-        <h2 class="text-base font-semibold text-white mb-5">Configure Run</h2>
-        <form id="run-form" enctype="multipart/form-data" onsubmit="submitRun(event)" novalidate>
-
-          <!-- Task -->
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              Task <span class="text-red-400 normal-case font-normal">required</span>
-            </label>
-            <textarea id="task" name="task" rows="3" required
-              placeholder="e.g. Generate FHI-aims single-point energy calculation scripts for benzene"
-              class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none leading-relaxed"></textarea>
+    <!-- CSD Results -->
+    <div id="csd-result" class="panel-result">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl backdrop-blur overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-700/60 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-book text-blue-400 text-sm"></i>
+            <span class="text-sm font-semibold text-white">Cited Papers</span>
           </div>
-
-          <!-- Material ID + Name -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Material ID</label>
-              <input type="text" id="material_id" name="material_id"
-                placeholder="BENZEN, mp-1234…"
-                class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Material Name</label>
-              <input type="text" id="material_name" name="material_name"
-                placeholder="Benzene…"
-                class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-            </div>
+          <div id="csd-status-badge" class="flex items-center gap-1.5">
+            <div class="w-2 h-2 bg-amber-400 rounded-full pulse"></div>
+            <span class="text-xs text-amber-400">Running…</span>
           </div>
-
-          <!-- Route -->
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Route</label>
-            <div class="flex gap-2">
-              <button type="button" onclick="setRoute('auto')" id="route-auto"
-                class="flex-1 py-2 px-3 text-sm rounded-xl bg-indigo-600 text-white font-medium transition-all">
-                <i class="fa-solid fa-wand-magic-sparkles mr-1"></i>Auto
-              </button>
-              <button type="button" onclick="setRoute('qa')" id="route-qa"
-                class="flex-1 py-2 px-3 text-sm rounded-xl bg-slate-700/80 text-slate-300 hover:bg-slate-600 font-medium transition-all">
-                <i class="fa-solid fa-magnifying-glass mr-1"></i>Q&amp;A
-              </button>
-              <button type="button" onclick="setRoute('simulation')" id="route-sim"
-                class="flex-1 py-2 px-3 text-sm rounded-xl bg-slate-700/80 text-slate-300 hover:bg-slate-600 font-medium transition-all">
-                <i class="fa-solid fa-flask mr-1"></i>Simulation
-              </button>
-            </div>
-            <input type="hidden" name="route" id="route-value" value="">
-          </div>
-
-          <!-- Software -->
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Simulation Software</label>
-            <select name="software" id="software"
-              class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-              <option value="">Auto-detect from task</option>
-              <option value="fhi-aims">FHI-aims</option>
-              <option value="quantum espresso">Quantum ESPRESSO</option>
-              <option value="vasp">VASP</option>
-              <option value="berkeleygw">BerkeleyGW</option>
-            </select>
-          </div>
-
-          <!-- Accuracy + Budget -->
-          <div class="grid grid-cols-2 gap-3 mb-4">
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Accuracy</label>
-              <input type="text" name="accuracy" placeholder="tight, high…"
-                class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-            </div>
-            <div>
-              <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">Budget</label>
-              <input type="text" name="budget" placeholder="2 hours, 4 cores…"
-                class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-            </div>
-          </div>
-
-          <!-- Papers upload -->
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-file-pdf text-red-400 mr-1"></i>Upload Papers (PDF)
-            </label>
-            <div class="drop-zone border-2 border-dashed border-slate-600/60 rounded-xl p-5 text-center cursor-pointer hover:border-slate-500 transition-colors"
-              onclick="document.getElementById('papers-input').click()"
-              ondragover="event.preventDefault();this.classList.add('file-drop-active')"
-              ondragleave="this.classList.remove('file-drop-active')"
-              ondrop="handleDrop(event,'papers')">
-              <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-600 block mb-1"></i>
-              <p class="text-xs text-slate-500">Drop PDFs here or <span class="text-indigo-400">browse</span></p>
-              <input type="file" id="papers-input" name="papers" multiple accept=".pdf,.txt" class="hidden"
-                onchange="updateFileList('papers',this.files)">
-            </div>
-            <ul id="papers-list" class="mt-2 space-y-1"></ul>
-          </div>
-
-          <!-- Structures upload -->
-          <div class="mb-4">
-            <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-              <i class="fa-solid fa-cube text-blue-400 mr-1"></i>Upload Structures (CIF, POSCAR…)
-            </label>
-            <div class="drop-zone border-2 border-dashed border-slate-600/60 rounded-xl p-5 text-center cursor-pointer hover:border-slate-500 transition-colors"
-              onclick="document.getElementById('structures-input').click()"
-              ondragover="event.preventDefault();this.classList.add('file-drop-active')"
-              ondragleave="this.classList.remove('file-drop-active')"
-              ondrop="handleDrop(event,'structures')">
-              <i class="fa-solid fa-cloud-arrow-up text-2xl text-slate-600 block mb-1"></i>
-              <p class="text-xs text-slate-500">Drop structure files here or <span class="text-indigo-400">browse</span></p>
-              <input type="file" id="structures-input" name="structures" multiple accept=".cif,.vasp,.in,.xyz,.poscar" class="hidden"
-                onchange="updateFileList('structures',this.files)">
-            </div>
-            <ul id="structures-list" class="mt-2 space-y-1"></ul>
-          </div>
-
-          <!-- No-AI toggle -->
-          <div class="flex items-center justify-between mb-5 px-1">
-            <label class="flex items-center gap-3 cursor-pointer select-none">
-              <div class="relative" onclick="toggleNoAI()">
-                <div id="toggle-track" class="w-10 h-5 bg-slate-700 rounded-full transition-colors"></div>
-                <div id="toggle-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform"></div>
-              </div>
-              <span class="text-sm text-slate-300">Disable AI <span class="text-slate-500 text-xs">(deterministic fallback only)</span></span>
-            </label>
-            <input type="hidden" name="no_ai" id="no-ai-val" value="false">
-          </div>
-
-          <!-- Submit -->
-          <button type="submit" id="submit-btn"
-            class="w-full bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-indigo-900/30">
-            <i class="fa-solid fa-play"></i>Run Agent
-          </button>
-        </form>
+        </div>
+        <div id="csd-loading" class="py-10 flex flex-col items-center">
+          <div class="w-8 h-8 border-[3px] border-blue-500 border-t-transparent rounded-full spin mb-3"></div>
+          <p class="text-xs text-slate-400">Retrieving citations…</p>
+        </div>
+        <div id="csd-body" class="hidden p-4 space-y-2">
+          <div id="csd-summary-text" class="text-xs text-slate-400 mb-3 bg-slate-900/40 rounded-xl px-3 py-2 leading-relaxed"></div>
+          <div id="csd-citations-list" class="space-y-2"></div>
+          <div id="csd-error-msg" class="hidden bg-red-950/40 border border-red-800/40 rounded-xl p-3 text-xs text-red-400"></div>
+        </div>
       </div>
     </div>
+  </div><!-- end panel 1 -->
 
-    <!-- RIGHT: Results -->
-    <div class="flex-1 min-w-0" id="results-panel" style="display:none">
+
+  <!-- ══════════════════════════════════
+       PANEL 2 · PDFs → Answer
+  ══════════════════════════════════ -->
+  <div class="flex flex-col gap-4">
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur">
+
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-8 h-8 bg-emerald-700/50 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-file-pdf text-emerald-300 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white">Papers (PDF) → Answer</h2>
+          <p class="text-xs text-slate-500">Upload papers and ask a materials question</p>
+        </div>
+      </div>
+      <div class="border-t border-slate-700/40 my-4"></div>
+
+      <form id="pdf-form" enctype="multipart/form-data" onsubmit="submitPDF(event)" novalidate>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            Question <span class="text-red-400 normal-case font-normal">required</span>
+          </label>
+          <textarea id="pdf-task" name="task" rows="3" required
+            placeholder="e.g. What is the reported band gap in these papers?"
+            class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-emerald-500 focus:ring-1 focus:ring-emerald-500 outline-none resize-none leading-relaxed"></textarea>
+        </div>
+
+        <!-- Quick question examples -->
+        <div class="mb-4">
+          <p class="text-xs text-slate-600 mb-1.5">Quick examples:</p>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button" onclick="document.getElementById('pdf-task').value='What is the reported band gap in these papers?'"
+              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg transition-colors">Band gap</button>
+            <button type="button" onclick="document.getElementById('pdf-task').value='What DFT methods and exchange-correlation functionals are used?'"
+              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg transition-colors">DFT methods</button>
+            <button type="button" onclick="document.getElementById('pdf-task').value='What are the key findings and conclusions of these papers?'"
+              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg transition-colors">Key findings</button>
+          </div>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            <i class="fa-solid fa-file-pdf text-red-400 mr-1"></i>Upload Papers (PDF) <span class="text-red-400 normal-case font-normal">required</span>
+          </label>
+          <div class="drop-zone border-2 border-dashed border-slate-600/60 rounded-xl p-4 text-center cursor-pointer hover:border-slate-500 transition-colors"
+            onclick="document.getElementById('pdf-papers-input').click()"
+            ondragover="event.preventDefault();this.classList.add('file-drop-active')"
+            ondragleave="this.classList.remove('file-drop-active')"
+            ondrop="handleDrop(event,'pdf-papers')">
+            <i class="fa-solid fa-cloud-arrow-up text-xl text-slate-600 block mb-1"></i>
+            <p class="text-xs text-slate-500">Drop PDFs here or <span class="text-emerald-400">browse</span></p>
+            <input type="file" id="pdf-papers-input" name="papers" multiple accept=".pdf,.txt" class="hidden"
+              onchange="updateFileList('pdf-papers',this.files)">
+          </div>
+          <ul id="pdf-papers-list" class="mt-2 space-y-1"></ul>
+        </div>
+
+        <input type="hidden" name="route" value="qa">
+
+        <div class="flex items-center gap-3 mb-5 px-1">
+          <label class="flex items-center gap-3 cursor-pointer select-none">
+            <div class="relative" onclick="toggleAI('pdf')">
+              <div id="pdf-track" class="w-10 h-5 bg-indigo-600 rounded-full transition-colors"></div>
+              <div id="pdf-thumb" class="absolute top-0.5 left-0.5 w-4 h-4 bg-white rounded-full shadow transition-transform" style="transform:translateX(20px)"></div>
+            </div>
+            <span class="text-xs text-slate-400">Enable AI</span>
+          </label>
+          <input type="hidden" name="no_ai" id="pdf-no-ai" value="false">
+        </div>
+
+        <button type="submit" id="pdf-btn"
+          class="w-full bg-emerald-600 hover:bg-emerald-500 active:bg-emerald-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-emerald-900/30 text-sm">
+          <i class="fa-solid fa-circle-question"></i>Get Answer
+        </button>
+      </form>
+    </div>
+
+    <!-- PDF Results -->
+    <div id="pdf-result" class="panel-result">
       <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl backdrop-blur overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-700/60 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-lightbulb text-emerald-400 text-sm"></i>
+            <span class="text-sm font-semibold text-white">Answer</span>
+          </div>
+          <div id="pdf-status-badge" class="flex items-center gap-1.5">
+            <div class="w-2 h-2 bg-amber-400 rounded-full pulse"></div>
+            <span class="text-xs text-amber-400">Running…</span>
+          </div>
+        </div>
+        <div id="pdf-loading" class="py-10 flex flex-col items-center">
+          <div class="w-8 h-8 border-[3px] border-emerald-500 border-t-transparent rounded-full spin mb-3"></div>
+          <p class="text-xs text-slate-400">Analyzing papers…</p>
+        </div>
+        <div id="pdf-body" class="hidden p-4 space-y-3">
+          <!-- Confidence -->
+          <div id="pdf-conf-row" class="hidden">
+            <div class="flex justify-between text-xs mb-1.5">
+              <span class="text-slate-500">Confidence</span>
+              <span id="pdf-conf-label" class="font-semibold text-slate-300"></span>
+            </div>
+            <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
+              <div id="pdf-conf-bar" class="h-full rounded-full conf-bar" style="width:0%"></div>
+            </div>
+          </div>
+          <!-- Warnings -->
+          <div id="pdf-warns" class="hidden">
+            <ul id="pdf-warn-list" class="space-y-1"></ul>
+          </div>
+          <!-- Direct answer -->
+          <div id="pdf-direct-area" class="hidden">
+            <p class="text-xs font-semibold text-emerald-400 mb-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-circle-check"></i>Direct Answer
+            </p>
+            <div class="bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-3 text-xs text-slate-200 leading-relaxed" id="pdf-direct-text"></div>
+          </div>
+          <!-- Full answer -->
+          <div id="pdf-answer-area" class="hidden">
+            <p class="text-xs font-semibold text-slate-400 mb-1.5">Answer</p>
+            <div class="bg-slate-900/60 rounded-xl p-3 text-xs text-slate-300 leading-relaxed" id="pdf-answer-text"></div>
+          </div>
+          <!-- Supporting refs -->
+          <div id="pdf-refs-area" class="hidden">
+            <p class="text-xs font-semibold text-blue-400 mb-1.5 flex items-center gap-1.5">
+              <i class="fa-solid fa-book-open"></i>Supporting References
+            </p>
+            <div id="pdf-refs-list" class="space-y-2"></div>
+          </div>
+          <!-- Citations -->
+          <div id="pdf-cits-area" class="hidden">
+            <p class="text-xs font-semibold text-slate-400 mb-1.5">Citations</p>
+            <div id="pdf-cits-list" class="space-y-1.5"></div>
+          </div>
+          <!-- Error -->
+          <div id="pdf-error-msg" class="hidden bg-red-950/40 border border-red-800/40 rounded-xl p-3 text-xs text-red-400"></div>
+        </div>
+      </div>
+    </div>
+  </div><!-- end panel 2 -->
 
-        <!-- Results header -->
-        <div class="px-6 py-4 border-b border-slate-700/60">
-          <div class="flex items-center justify-between mb-3">
-            <h2 class="text-base font-semibold text-white">Results</h2>
-            <div id="status-badge" class="flex items-center gap-2">
+
+  <!-- ══════════════════════════════════
+       PANEL 3 · DFT Input File Generator
+  ══════════════════════════════════ -->
+  <div class="flex flex-col gap-4">
+    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-5 backdrop-blur">
+
+      <div class="flex items-center gap-3 mb-1">
+        <div class="w-8 h-8 bg-purple-700/50 rounded-lg flex items-center justify-center flex-shrink-0">
+          <i class="fa-solid fa-wand-sparkles text-purple-300 text-sm"></i>
+        </div>
+        <div>
+          <h2 class="text-sm font-bold text-white">DFT Input File Generator</h2>
+          <p class="text-xs text-slate-500">Generate DFT input files from natural language</p>
+        </div>
+      </div>
+      <div class="border-t border-slate-700/40 my-4"></div>
+
+      <form id="gen-form" onsubmit="submitGenerate(event)" novalidate>
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            Software <span class="text-red-400 normal-case font-normal">required</span>
+          </label>
+          <select name="software" id="gen-software" required
+            class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none">
+            <option value="">Select software…</option>
+            <option value="fhi-aims">FHI-aims</option>
+            <option value="qe">Quantum ESPRESSO</option>
+          </select>
+        </div>
+
+        <div class="mb-4">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            Prompt <span class="text-red-400 normal-case font-normal">required</span>
+          </label>
+          <textarea name="prompt" id="gen-prompt" rows="4" required
+            placeholder="e.g. Generate a tight single-point setup for an organic crystal with 4×4×4 k-grid."
+            class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none resize-none leading-relaxed"></textarea>
+        </div>
+
+        <!-- Quick examples -->
+        <div class="mb-4">
+          <p class="text-xs text-slate-600 mb-1.5">Quick examples:</p>
+          <div class="flex flex-wrap gap-1.5">
+            <button type="button"
+              onclick="fillGen('fhi-aims','Generate a tight single-point setup for an organic crystal with 4x4x4 k-grid.')"
+              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg transition-colors">
+              FHI-aims: tight SPE
+            </button>
+            <button type="button"
+              onclick="fillGen('fhi-aims','Generate a geometry relaxation setup with PBE functional and many-body dispersion correction.')"
+              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg transition-colors">
+              FHI-aims: PBE+MBD
+            </button>
+            <button type="button"
+              onclick="fillGen('qe','Create an SCF input for a periodic system with 60 Ry cutoff and dense k-point mesh.')"
+              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-400 hover:text-slate-200 px-2.5 py-1 rounded-lg transition-colors">
+              QE: SCF 60 Ry
+            </button>
+          </div>
+        </div>
+
+        <div class="mb-5">
+          <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
+            Model <span class="text-slate-600 normal-case font-normal">(optional)</span>
+          </label>
+          <input type="text" name="model" placeholder="Default: gpt-5"
+            class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-purple-500 focus:ring-1 focus:ring-purple-500 outline-none">
+        </div>
+
+        <button type="submit" id="gen-btn"
+          class="w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-semibold py-2.5 px-4 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/30 text-sm">
+          <i class="fa-solid fa-wand-sparkles"></i>Generate Input File
+        </button>
+      </form>
+    </div>
+
+    <!-- Generator Results -->
+    <div id="gen-result" class="panel-result">
+      <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl backdrop-blur overflow-hidden">
+        <div class="px-5 py-3.5 border-b border-slate-700/60 flex items-center justify-between">
+          <div class="flex items-center gap-2">
+            <i class="fa-solid fa-file-code text-purple-400 text-sm"></i>
+            <span class="text-sm font-semibold text-white" id="gen-filename">Generated File</span>
+          </div>
+          <div class="flex items-center gap-2">
+            <div id="gen-status-badge" class="flex items-center gap-1.5">
               <div class="w-2 h-2 bg-amber-400 rounded-full pulse"></div>
               <span class="text-xs text-amber-400">Running…</span>
             </div>
-          </div>
-          <div id="meta-info" style="display:none">
-            <div class="flex flex-wrap gap-2 text-xs mb-3">
-              <span class="bg-slate-900/60 px-2.5 py-1 rounded-lg text-slate-400 font-mono">
-                <span class="text-slate-600">run: </span><span id="meta-run-id"></span>
-              </span>
-              <span id="meta-route-badge" class="px-2.5 py-1 rounded-lg font-medium"></span>
-            </div>
-            <div>
-              <div class="flex justify-between text-xs mb-1.5">
-                <span class="text-slate-500">Confidence</span>
-                <span id="conf-label" class="font-semibold"></span>
-              </div>
-              <div class="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-                <div id="conf-bar" class="h-full rounded-full conf-bar" style="width:0%"></div>
-              </div>
-            </div>
+            <button onclick="downloadGenerated()" id="gen-download-btn"
+              class="hidden text-xs bg-purple-600 hover:bg-purple-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+              <i class="fa-solid fa-download"></i>Download
+            </button>
           </div>
         </div>
-
-        <!-- Tabs nav -->
-        <div class="border-b border-slate-700/60 px-2" id="rtabs-nav" style="display:none">
-          <div class="flex">
-            <button onclick="showRTab('summary')" class="rtab active px-4 py-2.5 text-xs font-medium border-b-2 transition-colors">Summary</button>
-            <button onclick="showRTab('files')"   class="rtab px-4 py-2.5 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors" id="rtab-files-btn">Files</button>
-            <button onclick="showRTab('citations')" class="rtab px-4 py-2.5 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors" id="rtab-cit-btn">Citations</button>
-            <button onclick="showRTab('agents')"  class="rtab px-4 py-2.5 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors">Agents</button>
-            <button onclick="showRTab('json')"    class="rtab px-4 py-2.5 text-xs font-medium border-b-2 border-transparent text-slate-400 hover:text-slate-200 transition-colors">JSON</button>
+        <div id="gen-loading" class="py-10 flex flex-col items-center">
+          <div class="w-8 h-8 border-[3px] border-purple-500 border-t-transparent rounded-full spin mb-3"></div>
+          <p class="text-xs text-slate-400">Generating input file…</p>
+        </div>
+        <div id="gen-body" class="hidden">
+          <div class="bg-slate-950/60 overflow-auto max-h-96">
+            <pre id="gen-file-content" class="p-4 text-xs text-slate-300 font-mono"></pre>
           </div>
         </div>
-
-        <!-- Loading -->
-        <div id="loading-area" class="py-16 flex flex-col items-center">
-          <div class="w-10 h-10 border-[3px] border-indigo-500 border-t-transparent rounded-full spin mb-4"></div>
-          <p class="text-sm text-slate-400">Running agent pipeline…</p>
-          <p class="text-xs text-slate-600 mt-1">This may take a few seconds</p>
-        </div>
-
-        <!-- Tab content wrapper -->
-        <div id="rtabs-content" style="display:none">
-
-          <!-- Summary -->
-          <div id="rtab-summary" class="rtab-pane p-5">
-            <div id="warn-area" class="mb-4 hidden">
-              <div class="flex items-center gap-2 mb-2">
-                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-sm"></i>
-                <span class="text-xs font-semibold text-amber-400">Warnings</span>
-              </div>
-              <ul id="warn-list" class="space-y-1.5"></ul>
-            </div>
-            <div class="bg-slate-900/60 rounded-xl p-4 mb-3">
-              <p class="text-sm text-slate-200 leading-relaxed whitespace-pre-wrap" id="summary-text"></p>
-            </div>
-            <div id="direct-answer-area" class="hidden">
-              <div class="flex items-center gap-2 mb-2">
-                <i class="fa-solid fa-circle-check text-emerald-400 text-sm"></i>
-                <span class="text-xs font-semibold text-emerald-400">Direct Answer</span>
-              </div>
-              <div class="bg-emerald-950/40 border border-emerald-800/40 rounded-xl p-4">
-                <p class="text-sm text-slate-200 leading-relaxed" id="direct-answer-text"></p>
-              </div>
-            </div>
-            <div id="supporting-refs-area" class="mt-4 hidden">
-              <div class="flex items-center gap-2 mb-2">
-                <i class="fa-solid fa-book-open text-blue-400 text-sm"></i>
-                <span class="text-xs font-semibold text-blue-400">Supporting References</span>
-              </div>
-              <div id="supporting-refs-list" class="space-y-2"></div>
-            </div>
-          </div>
-
-          <!-- Files -->
-          <div id="rtab-files" class="rtab-pane p-5 hidden">
-            <div id="files-list" class="space-y-2"></div>
-            <p id="no-files-msg" class="text-sm text-slate-500 text-center py-8 hidden">No generated files for this run.</p>
-          </div>
-
-          <!-- Citations -->
-          <div id="rtab-citations" class="rtab-pane p-5 hidden">
-            <div id="citations-list" class="space-y-2"></div>
-            <p id="no-cit-msg" class="text-sm text-slate-500 text-center py-8 hidden">No citations for this run.</p>
-          </div>
-
-          <!-- Agents -->
-          <div id="rtab-agents" class="rtab-pane p-5 hidden">
-            <div class="overflow-x-auto">
-              <table class="w-full text-xs">
-                <thead>
-                  <tr class="border-b border-slate-700/60">
-                    <th class="text-left text-slate-500 font-semibold pb-2 pr-4">Agent</th>
-                    <th class="text-left text-slate-500 font-semibold pb-2 pr-4">Model</th>
-                    <th class="text-left text-slate-500 font-semibold pb-2 pr-4">Status</th>
-                    <th class="text-left text-slate-500 font-semibold pb-2 pr-4">Tools</th>
-                    <th class="text-left text-slate-500 font-semibold pb-2">Note</th>
-                  </tr>
-                </thead>
-                <tbody id="agents-tbody" class="divide-y divide-slate-700/30"></tbody>
-              </table>
-            </div>
-          </div>
-
-          <!-- JSON -->
-          <div id="rtab-json" class="rtab-pane p-5 hidden">
-            <div class="bg-slate-950/60 rounded-xl overflow-auto max-h-[28rem]">
-              <pre id="json-content" class="p-4 text-xs text-slate-400 font-mono"></pre>
-            </div>
-          </div>
-
-        </div><!-- end rtabs-content -->
-      </div>
-    </div>
-
-  </div><!-- end flex -->
-</div><!-- end pane-agent -->
-
-
-<!-- ═══════════════════════════════════════════
-     PANE: GENERATE INPUT FILE
-═══════════════════════════════════════════ -->
-<div id="pane-generator" class="max-w-2xl mx-auto px-4 py-5 hidden">
-
-  <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl p-6 backdrop-blur mb-5">
-    <div class="flex items-center gap-3 mb-1">
-      <div class="w-8 h-8 bg-purple-700/60 rounded-lg flex items-center justify-center">
-        <i class="fa-solid fa-wand-sparkles text-purple-300 text-sm"></i>
-      </div>
-      <h2 class="text-base font-semibold text-white">Few-Shot Input File Generator</h2>
-    </div>
-    <p class="text-xs text-slate-500 mb-5 ml-11">
-      Generates DFT input files from a natural-language prompt using local examples in
-      <code class="text-indigo-400 bg-slate-900/60 px-1 py-0.5 rounded">data/FHI-aims/</code> and
-      <code class="text-indigo-400 bg-slate-900/60 px-1 py-0.5 rounded">data/QE/</code> as few-shot context.
-    </p>
-
-    <form id="gen-form" onsubmit="submitGenerate(event)" novalidate>
-      <div class="mb-4">
-        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-          Software <span class="text-red-400 normal-case font-normal">required</span>
-        </label>
-        <select name="software" id="gen-software" required
-          class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-          <option value="">Select software…</option>
-          <option value="fhi-aims">FHI-aims</option>
-          <option value="qe">Quantum ESPRESSO</option>
-        </select>
-      </div>
-
-      <div class="mb-4">
-        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-          Prompt <span class="text-red-400 normal-case font-normal">required</span>
-        </label>
-        <textarea name="prompt" id="gen-prompt" rows="4" required
-          placeholder="e.g. Generate a tight single-point setup for an organic crystal with 4×4×4 k-grid."
-          class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none resize-none leading-relaxed"></textarea>
-      </div>
-
-      <!-- Quick examples -->
-      <div class="mb-4">
-        <p class="text-xs text-slate-600 mb-2">Quick examples:</p>
-        <div class="flex flex-wrap gap-2">
-          <button type="button"
-            onclick="fillGen('fhi-aims','Generate a tight single-point setup for an organic crystal with 4x4x4 k-grid.')"
-            class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-colors">
-            FHI-aims: tight SPE organic crystal
-          </button>
-          <button type="button"
-            onclick="fillGen('fhi-aims','Generate a geometry relaxation setup with PBE functional and many-body dispersion correction.')"
-            class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-colors">
-            FHI-aims: PBE+MBD relaxation
-          </button>
-          <button type="button"
-            onclick="fillGen('qe','Create an SCF input for a periodic system with 60 Ry cutoff and dense k-point mesh.')"
-            class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-colors">
-            QE: SCF 60 Ry dense k-mesh
-          </button>
-        </div>
-      </div>
-
-      <div class="mb-5">
-        <label class="block text-xs font-semibold text-slate-400 uppercase tracking-wider mb-1.5">
-          Model <span class="text-slate-600 normal-case font-normal">(optional override)</span>
-        </label>
-        <input type="text" name="model" placeholder="Leave empty to use default (gpt-5)"
-          class="w-full bg-slate-900/80 border border-slate-600/60 rounded-xl px-4 py-2.5 text-sm text-slate-100 placeholder-slate-600 focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 outline-none">
-      </div>
-
-      <button type="submit" id="gen-btn"
-        class="w-full bg-purple-600 hover:bg-purple-500 active:bg-purple-700 text-white font-semibold py-3 px-6 rounded-xl transition-all flex items-center justify-center gap-2 shadow-lg shadow-purple-900/30">
-        <i class="fa-solid fa-wand-sparkles"></i>Generate Input File
-      </button>
-    </form>
-  </div>
-
-  <!-- Generator result -->
-  <div id="gen-result" class="hidden">
-    <div class="bg-slate-800/60 border border-slate-700/60 rounded-2xl backdrop-blur overflow-hidden">
-      <div class="px-5 py-3.5 border-b border-slate-700/60 flex items-center justify-between">
-        <div class="flex items-center gap-2">
-          <i class="fa-solid fa-file-code text-purple-400"></i>
-          <span class="text-sm font-medium text-white" id="gen-filename">Generated File</span>
-        </div>
-        <button onclick="downloadGenerated()" id="gen-download-btn" class="hidden text-xs bg-purple-600 hover:bg-purple-500 text-white px-4 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
-          <i class="fa-solid fa-download"></i>Download
-        </button>
-      </div>
-      <div id="gen-loading-area" class="py-10 flex flex-col items-center">
-        <div class="w-9 h-9 border-[3px] border-purple-500 border-t-transparent rounded-full spin mb-3"></div>
-        <p class="text-sm text-slate-400">Generating input file…</p>
-      </div>
-      <div id="gen-content-area" class="hidden">
-        <div class="bg-slate-950/60 overflow-auto max-h-96">
-          <pre id="gen-file-content" class="p-5 text-xs text-slate-300 font-mono"></pre>
-        </div>
-      </div>
-      <div id="gen-error-area" class="hidden p-5">
-        <div class="bg-red-950/40 border border-red-800/40 rounded-xl p-4">
-          <p class="text-xs text-red-400" id="gen-error-msg"></p>
+        <div id="gen-error-area" class="hidden p-4">
+          <div class="bg-red-950/40 border border-red-800/40 rounded-xl p-3 text-xs text-red-400" id="gen-error-msg"></div>
         </div>
       </div>
     </div>
-  </div>
+  </div><!-- end panel 3 -->
 
-</div><!-- end pane-generator -->
+</div><!-- end grid -->
 
 
 <!-- ───────── FILE PREVIEW MODAL ───────── -->
@@ -454,7 +402,8 @@
         <span class="font-medium text-white text-sm" id="preview-fname"></span>
       </div>
       <div class="flex items-center gap-3">
-        <a id="preview-dl-link" href="#" class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
+        <a id="preview-dl-link" href="#"
+          class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-4 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
           <i class="fa-solid fa-download"></i>Download
         </a>
         <button onclick="closePreview()" class="text-slate-400 hover:text-white transition-colors">
@@ -473,373 +422,246 @@
      JAVASCRIPT
 ═══════════════════════════════════════════ -->
 <script>
-// ── Tab switching ─────────────────────────────
-function switchTab(tab) {
-  ['agent','generator'].forEach(t => {
-    const pane = document.getElementById('pane-' + t);
-    const btn  = document.getElementById('tab-' + t);
-    const active = t === tab;
-    pane.style.display = active ? 'block' : 'none';
-    btn.className = btn.className
-      .replace('border-indigo-500 text-indigo-400', '')
-      .replace('border-transparent text-slate-400', '');
-    if (active) btn.className += ' border-indigo-500 text-indigo-400';
-    else        btn.className += ' border-transparent text-slate-400';
-  });
-}
+// ── AI toggle (per panel) ─────────────────────
+const aiState = { csd: true, pdf: true };
 
-// ── Presets ────────────────────────────────────
-const PRESETS = [
-  { icon:'fa-book',        color:'text-blue-400',   title:'CSD → Cited Papers',
-    task:'Find cited papers for CSD reference code BENZEN',
-    material_id:'BENZEN', route:'qa', software:'' },
-  { icon:'fa-flask',       color:'text-green-400',  title:'CSD → FHI-aims Scripts',
-    task:'Generate FHI-aims single-point energy calculation scripts',
-    material_id:'BENZEN', route:'simulation', software:'fhi-aims' },
-  { icon:'fa-comment-dots',color:'text-purple-400', title:'CSD + Q → Answer',
-    task:'What are the cited papers and likely optical-gap evidence for BENZEN?',
-    material_id:'BENZEN', route:'qa', software:'' },
-  { icon:'fa-file-pdf',    color:'text-red-400',    title:'PDFs → Band Gap',
-    task:'What is the reported band gap in these papers?',
-    material_id:'', route:'qa', software:'', note:'Upload PDFs below' },
-  { icon:'fa-atom',        color:'text-cyan-400',   title:'Structure → QE Scripts',
-    task:'Generate Quantum ESPRESSO single-point energy calculation scripts',
-    material_id:'', route:'simulation', software:'quantum espresso', note:'Upload structure below' },
-  { icon:'fa-layer-group', color:'text-orange-400', title:'Structure → VASP Scripts',
-    task:'Generate VASP single-point energy calculation scripts',
-    material_id:'', route:'simulation', software:'vasp', note:'Upload structure below' },
-];
-
-function initPresets() {
-  const c = document.getElementById('presets-list');
-  PRESETS.forEach(p => {
-    const b = document.createElement('button');
-    b.type = 'button';
-    b.className = 'w-full text-left bg-slate-800/60 hover:bg-slate-700/60 border border-slate-700/40 hover:border-slate-500/60 rounded-xl p-3 transition-all group';
-    b.innerHTML = `
-      <div class="flex items-center gap-2 mb-0.5">
-        <i class="fa-solid ${p.icon} ${p.color} text-xs w-3.5 flex-shrink-0"></i>
-        <span class="text-xs font-semibold text-slate-300 group-hover:text-white leading-tight">${p.title}</span>
-      </div>
-      ${p.note ? `<p class="text-xs text-amber-500/80 pl-5 mt-0.5 leading-tight"><i class="fa-solid fa-arrow-up text-xs mr-0.5"></i>${p.note}</p>` : ''}
-    `;
-    b.onclick = () => applyPreset(p);
-    c.appendChild(b);
-  });
-}
-
-function applyPreset(p) {
-  document.getElementById('task').value = p.task;
-  document.getElementById('material_id').value = p.material_id || '';
-  document.getElementById('material_name').value = '';
-  document.getElementById('software').value = p.software || '';
-  setRoute(p.route || 'auto');
-  document.getElementById('run-form').scrollIntoView({ behavior:'smooth', block:'start' });
-}
-
-// ── Route ──────────────────────────────────────
-let currentRoute = 'auto';
-function setRoute(r) {
-  currentRoute = r;
-  const map = { auto:'route-auto', qa:'route-qa', simulation:'route-sim' };
-  Object.entries(map).forEach(([k, id]) => {
-    const btn = document.getElementById(id);
-    if (k === r) {
-      btn.className = btn.className.replace(/bg-slate-700\/80\s*text-slate-300\s*hover:bg-slate-600/, '');
-      btn.classList.add('bg-indigo-600','text-white');
-      btn.classList.remove('bg-slate-700/80','text-slate-300','hover:bg-slate-600');
-    } else {
-      btn.classList.remove('bg-indigo-600','text-white');
-      btn.classList.add('bg-slate-700/80','text-slate-300','hover:bg-slate-600');
-    }
-  });
-  document.getElementById('route-value').value = r === 'auto' ? '' : r;
-}
-
-// ── No-AI toggle ───────────────────────────────
-let noAI = false;
-function toggleNoAI() {
-  noAI = !noAI;
-  document.getElementById('no-ai-val').value = noAI ? 'true' : 'false';
-  document.getElementById('toggle-track').classList.toggle('bg-indigo-600', noAI);
-  document.getElementById('toggle-track').classList.toggle('bg-slate-700', !noAI);
-  document.getElementById('toggle-thumb').style.transform = noAI ? 'translateX(20px)' : 'translateX(0)';
+function toggleAI(panel) {
+  aiState[panel] = !aiState[panel];
+  const on = aiState[panel];
+  document.getElementById(panel + '-track').classList.toggle('bg-indigo-600', on);
+  document.getElementById(panel + '-track').classList.toggle('bg-slate-700', !on);
+  document.getElementById(panel + '-thumb').style.transform = on ? 'translateX(20px)' : 'translateX(0)';
+  if (panel === 'pdf') document.getElementById('pdf-no-ai').value = on ? 'false' : 'true';
 }
 
 // ── File upload ────────────────────────────────
-function updateFileList(type, files) {
-  const ul = document.getElementById(type + '-list');
+function updateFileList(key, files) {
+  const ul = document.getElementById(key + '-list');
   ul.innerHTML = '';
   Array.from(files).forEach(f => {
     const li = document.createElement('li');
     li.className = 'flex items-center gap-2 text-xs text-slate-400 bg-slate-900/40 rounded-lg px-3 py-1.5';
-    li.innerHTML = `<i class="fa-solid fa-file text-slate-600"></i>${esc(f.name)} <span class="text-slate-600 ml-auto">${(f.size/1024).toFixed(1)} KB</span>`;
+    li.innerHTML = `<i class="fa-solid fa-file text-slate-600"></i>${esc(f.name)}<span class="text-slate-600 ml-auto">${(f.size/1024).toFixed(1)} KB</span>`;
     ul.appendChild(li);
   });
 }
-function handleDrop(ev, type) {
+
+function handleDrop(ev, key) {
   ev.preventDefault();
   ev.currentTarget.classList.remove('file-drop-active');
-  const inp = document.getElementById(type + '-input');
+  const inp = document.getElementById(key + '-input');
   const dt = new DataTransfer();
   Array.from(ev.dataTransfer.files).forEach(f => dt.items.add(f));
   inp.files = dt.files;
-  updateFileList(type, inp.files);
+  updateFileList(key, inp.files);
 }
 
-// ── Run form ───────────────────────────────────
-let runPollId = null;
-let currentWebRunId = null;
-let orchRunId = null;
+// ── Panel 1: CSD → Cited Papers ───────────────
+let csdPollId = null;
 
-async function submitRun(ev) {
+async function submitCSD(ev) {
   ev.preventDefault();
-  if (!document.getElementById('task').value.trim()) {
-    document.getElementById('task').focus();
-    return;
-  }
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full spin"></div> Running…';
+  const code = document.getElementById('csd-code').value.trim();
+  if (!code) { document.getElementById('csd-code').focus(); return; }
+  const count = document.getElementById('csd-count').value;
 
-  const panel = document.getElementById('results-panel');
-  panel.style.display = 'block';
-  document.getElementById('loading-area').style.display = 'flex';
-  document.getElementById('rtabs-nav').style.display = 'none';
-  document.getElementById('rtabs-content').style.display = 'none';
-  document.getElementById('meta-info').style.display = 'none';
-  setStatusBadge('running');
+  setBtnLoading('csd-btn', 'Searching…', 'blue');
+  openResult('csd');
+  setStatusBadge('csd', 'running');
+
+  const fd = new FormData();
+  fd.append('task', `Find ${count} citing papers for CSD reference code ${code}`);
+  fd.append('material_id', code);
+  fd.append('route', 'qa');
+  fd.append('no_ai', aiState.csd ? 'false' : 'true');
 
   try {
-    const fd = new FormData(document.getElementById('run-form'));
-    const res = await fetch('/run', { method:'POST', body:fd });
-    const data = await res.json();
-    currentWebRunId = data.run_id;
-    runPollId = setInterval(pollRun, 1800);
-  } catch(e) {
-    showRunError(e.message);
-  }
+    const r = await fetch('/run', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.error) { showCSDError(data.error); return; }
+    csdPollId = setInterval(() => pollCSD(data.run_id), 1800);
+  } catch(e) { showCSDError(e.message); }
 }
 
-async function pollRun() {
-  if (!currentWebRunId) return;
+async function pollCSD(rid) {
   try {
-    const res = await fetch('/status/' + currentWebRunId);
-    const data = await res.json();
+    const r = await fetch('/status/' + rid);
+    const data = await r.json();
     if (data.status === 'running') return;
-    clearInterval(runPollId);
-    if (data.status === 'error') { showRunError(data.error); return; }
-    if (data.status === 'done') {
-      orchRunId = data.orch_run_id;
-      renderResult(data.result, data.orch_run_id);
-    }
+    clearInterval(csdPollId);
+    if (data.status === 'error') { showCSDError(data.error); return; }
+    renderCSD(data.result);
   } catch(_) {}
 }
 
-function setStatusBadge(state, text) {
-  const colors = { running:'amber', done:'emerald', error:'red' };
-  const labels = { running:'Running…', done:'Completed', error:'Error' };
-  const c = colors[state];
-  const t = text || labels[state];
-  document.getElementById('status-badge').innerHTML = `
-    <div class="w-2 h-2 bg-${c}-400 rounded-full ${state==='running'?'pulse':''}"></div>
-    <span class="text-xs text-${c}-400">${esc(t)}</span>
-  `;
-}
+function renderCSD(result) {
+  setStatusBadge('csd', 'done');
+  resetBtn('csd-btn', '<i class="fa-solid fa-magnifying-glass"></i>Find Cited Papers');
+  showPanel('csd', true);
 
-function showRunError(msg) {
-  document.getElementById('loading-area').style.display = 'none';
-  document.getElementById('rtabs-nav').style.display = 'block';
-  document.getElementById('rtabs-content').style.display = 'block';
-  setStatusBadge('error');
-  document.getElementById('summary-text').textContent = 'Error: ' + msg;
-  showRTab('summary');
-  resetRunBtn();
-}
+  document.getElementById('csd-summary-text').textContent = result.summary || '';
 
-function renderResult(result, orid) {
-  document.getElementById('loading-area').style.display = 'none';
-  document.getElementById('rtabs-nav').style.display = 'block';
-  document.getElementById('rtabs-content').style.display = 'block';
-  setStatusBadge('done');
-
-  // meta
-  document.getElementById('meta-info').style.display = 'block';
-  document.getElementById('meta-run-id').textContent = orid || result.run_id || '';
-  const route = (result.route || '').toLowerCase();
-  const rb = document.getElementById('meta-route-badge');
-  if (route === 'qa') {
-    rb.className = 'px-2.5 py-1 rounded-lg font-medium text-xs bg-blue-900/40 text-blue-300';
-    rb.textContent = 'Q&A Route';
+  const cits = result.citations || [];
+  const so = result.structured_output || {};
+  const papers = so.cited_papers || so.papers || cits;
+  const cl = document.getElementById('csd-citations-list');
+  cl.innerHTML = '';
+  if (papers.length) {
+    papers.forEach((p, i) => {
+      const title = typeof p === 'string' ? p : (p.title || p.paper_title || JSON.stringify(p));
+      const loc = typeof p === 'object' ? (p.location || p.doi || p.url || '') : '';
+      cl.innerHTML += `
+        <div class="bg-slate-900/60 border border-slate-700/30 rounded-xl p-3">
+          <div class="flex items-start gap-2">
+            <span class="text-xs text-slate-600 font-mono mt-0.5 shrink-0">[${i+1}]</span>
+            <div>
+              <p class="text-xs text-slate-200 font-medium leading-relaxed">${esc(title)}</p>
+              ${loc ? `<p class="text-xs text-slate-500 mt-0.5">${esc(loc)}</p>` : ''}
+            </div>
+          </div>
+        </div>`;
+    });
+  } else if (cits.length) {
+    cits.forEach((c, i) => {
+      const title = typeof c === 'string' ? c : (c.title || 'Untitled');
+      const loc = typeof c === 'object' ? (c.location || '') : '';
+      cl.innerHTML += `
+        <div class="bg-slate-900/60 border border-slate-700/30 rounded-xl p-3">
+          <div class="flex items-start gap-2">
+            <span class="text-xs text-slate-600 font-mono mt-0.5 shrink-0">[${i+1}]</span>
+            <div>
+              <p class="text-xs text-slate-200 font-medium leading-relaxed">${esc(title)}</p>
+              ${loc ? `<p class="text-xs text-slate-500 mt-0.5">${esc(loc)}</p>` : ''}
+            </div>
+          </div>
+        </div>`;
+    });
   } else {
-    rb.className = 'px-2.5 py-1 rounded-lg font-medium text-xs bg-purple-900/40 text-purple-300';
-    rb.textContent = 'Simulation Route';
+    cl.innerHTML = '<p class="text-xs text-slate-500 text-center py-4">No cited papers found.</p>';
   }
+}
+
+function showCSDError(msg) {
+  setStatusBadge('csd', 'error');
+  resetBtn('csd-btn', '<i class="fa-solid fa-magnifying-glass"></i>Find Cited Papers');
+  showPanel('csd', true);
+  document.getElementById('csd-summary-text').textContent = '';
+  document.getElementById('csd-citations-list').innerHTML = '';
+  const e = document.getElementById('csd-error-msg');
+  e.classList.remove('hidden');
+  e.textContent = 'Error: ' + msg;
+}
+
+// ── Panel 2: PDFs → Answer ─────────────────────
+let pdfPollId = null;
+
+async function submitPDF(ev) {
+  ev.preventDefault();
+  const task = document.getElementById('pdf-task').value.trim();
+  if (!task) { document.getElementById('pdf-task').focus(); return; }
+
+  setBtnLoading('pdf-btn', 'Analyzing…', 'emerald');
+  openResult('pdf');
+  setStatusBadge('pdf', 'running');
+
+  try {
+    const fd = new FormData(document.getElementById('pdf-form'));
+    const r = await fetch('/run', { method: 'POST', body: fd });
+    const data = await r.json();
+    if (data.error) { showPDFError(data.error); return; }
+    pdfPollId = setInterval(() => pollPDF(data.run_id), 1800);
+  } catch(e) { showPDFError(e.message); }
+}
+
+async function pollPDF(rid) {
+  try {
+    const r = await fetch('/status/' + rid);
+    const data = await r.json();
+    if (data.status === 'running') return;
+    clearInterval(pdfPollId);
+    if (data.status === 'error') { showPDFError(data.error); return; }
+    renderPDF(data.result);
+  } catch(_) {}
+}
+
+function renderPDF(result) {
+  setStatusBadge('pdf', 'done');
+  resetBtn('pdf-btn', '<i class="fa-solid fa-circle-question"></i>Get Answer');
+  showPanel('pdf', true);
 
   // confidence
   const conf = result.confidence || 0;
-  const pct  = Math.round(conf * 100);
-  document.getElementById('conf-label').textContent = pct + '%';
-  const bar = document.getElementById('conf-bar');
+  const pct = Math.round(conf * 100);
+  const cr = document.getElementById('pdf-conf-row');
+  cr.classList.remove('hidden');
+  document.getElementById('pdf-conf-label').textContent = pct + '%';
+  const bar = document.getElementById('pdf-conf-bar');
   bar.style.width = pct + '%';
   bar.className = 'h-full rounded-full conf-bar ' + (conf < 0.4 ? 'bg-red-500' : conf < 0.7 ? 'bg-amber-500' : 'bg-emerald-500');
 
   // warnings
   const warns = result.warnings || [];
-  const wa = document.getElementById('warn-area');
   if (warns.length) {
-    wa.classList.remove('hidden');
-    document.getElementById('warn-list').innerHTML = warns.map(w =>
+    document.getElementById('pdf-warns').classList.remove('hidden');
+    document.getElementById('pdf-warn-list').innerHTML = warns.map(w =>
       `<li class="bg-amber-950/40 border border-amber-800/40 rounded-lg px-3 py-2 text-xs text-amber-200">${esc(w)}</li>`
     ).join('');
-  } else { wa.classList.add('hidden'); }
+  }
 
-  // summary
-  document.getElementById('summary-text').textContent = result.summary || 'Run completed.';
-
-  // direct answer
   const so = result.structured_output || {};
+  // direct answer
   if (so.direct_answer) {
-    document.getElementById('direct-answer-area').classList.remove('hidden');
-    document.getElementById('direct-answer-text').textContent = so.direct_answer;
-  } else {
-    document.getElementById('direct-answer-area').classList.add('hidden');
+    document.getElementById('pdf-direct-area').classList.remove('hidden');
+    document.getElementById('pdf-direct-text').textContent = so.direct_answer;
+  }
+  // full answer
+  if (so.answer) {
+    document.getElementById('pdf-answer-area').classList.remove('hidden');
+    document.getElementById('pdf-answer-text').textContent = so.answer;
+  } else if (result.summary) {
+    document.getElementById('pdf-answer-area').classList.remove('hidden');
+    document.getElementById('pdf-answer-text').textContent = result.summary;
   }
 
   // supporting refs
   const refs = so.supporting_references || [];
-  const sra = document.getElementById('supporting-refs-area');
   if (refs.length) {
-    sra.classList.remove('hidden');
-    document.getElementById('supporting-refs-list').innerHTML = refs.map(r => `
-      <div class="bg-slate-900/60 rounded-xl p-3 text-xs">
+    document.getElementById('pdf-refs-area').classList.remove('hidden');
+    document.getElementById('pdf-refs-list').innerHTML = refs.map(r => `
+      <div class="bg-slate-900/60 rounded-xl p-2.5 text-xs">
         <div class="flex items-center gap-2 mb-1">
           <span class="text-slate-500 font-mono">${esc(r.source || '')}</span>
           ${r.reference_type ? `<span class="bg-slate-700 text-slate-400 px-1.5 py-0.5 rounded">${esc(r.reference_type)}</span>` : ''}
         </div>
         ${r.excerpt ? `<p class="text-slate-400 italic">"${esc(r.excerpt)}"</p>` : ''}
-      </div>
-    `).join('');
-  } else { sra.classList.add('hidden'); }
-
-  // files
-  const gf = so.generated_files || {};
-  const fl = document.getElementById('files-list');
-  fl.innerHTML = '';
-  const names = Object.keys(gf);
-  if (names.length) {
-    names.forEach(name => {
-      const path = gf[name];
-      const fname = path.split('/').pop() || name;
-      fl.innerHTML += `
-        <div class="flex items-center justify-between bg-slate-900/60 border border-slate-700/40 rounded-xl px-4 py-3">
-          <div class="flex items-center gap-3">
-            <i class="fa-solid fa-file-code text-indigo-400 text-sm"></i>
-            <div>
-              <p class="text-sm font-medium text-slate-200">${esc(name)}</p>
-              <p class="text-xs text-slate-600 font-mono">${esc(fname)}</p>
-            </div>
-          </div>
-          <div class="flex gap-2">
-            <button onclick="previewFile('${esc(orid||'')}','${esc(fname)}')"
-              class="text-xs bg-slate-700/60 hover:bg-slate-600 text-slate-300 px-3 py-1.5 rounded-lg transition-colors">
-              <i class="fa-solid fa-eye mr-1"></i>Preview
-            </button>
-            <a href="/download/${esc(orid||'')}/${esc(fname)}"
-              class="text-xs bg-indigo-600 hover:bg-indigo-500 text-white px-3 py-1.5 rounded-lg flex items-center gap-1.5 transition-colors">
-              <i class="fa-solid fa-download"></i>Download
-            </a>
-          </div>
-        </div>`;
-    });
-    document.getElementById('no-files-msg').classList.add('hidden');
-    document.getElementById('rtab-files-btn').innerHTML =
-      `Files <span class="ml-1 text-xs bg-indigo-600/80 text-white px-1.5 py-0.5 rounded-full">${names.length}</span>`;
-  } else { document.getElementById('no-files-msg').classList.remove('hidden'); }
+      </div>`).join('');
+  }
 
   // citations
-  const cits = result.citations || [];
-  const cl = document.getElementById('citations-list');
-  cl.innerHTML = '';
+  const cits = result.citations || so.citations || [];
   if (cits.length) {
-    cits.forEach((c, i) => {
-      cl.innerHTML += `
-        <div class="bg-slate-900/60 border border-slate-700/40 rounded-xl p-4">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="text-sm font-medium text-slate-200 mb-1">${esc(c.title || 'Untitled')}</p>
-              ${c.location ? `<p class="text-xs text-slate-500 mb-1.5"><i class="fa-solid fa-location-dot mr-1"></i>${esc(c.location)}</p>` : ''}
-              ${c.source_type ? `<span class="text-xs bg-slate-700/60 text-slate-400 px-2 py-0.5 rounded-lg">${esc(c.source_type)}</span>` : ''}
-            </div>
-            <span class="text-xs text-slate-600 font-mono shrink-0">[${i+1}]</span>
-          </div>
-        </div>`;
-    });
-    document.getElementById('no-cit-msg').classList.add('hidden');
-    document.getElementById('rtab-cit-btn').innerHTML =
-      `Citations <span class="ml-1 text-xs bg-indigo-600/80 text-white px-1.5 py-0.5 rounded-full">${cits.length}</span>`;
-  } else { document.getElementById('no-cit-msg').classList.remove('hidden'); }
-
-  // agents
-  const au = result.agent_usage || [];
-  document.getElementById('agents-tbody').innerHTML = au.map(a => {
-    const sc = a.status==='used'
-      ? 'text-emerald-400 bg-emerald-900/30'
-      : a.status==='fallback'
-      ? 'text-amber-400 bg-amber-900/30'
-      : 'text-slate-400 bg-slate-700/30';
-    return `<tr>
-      <td class="py-2 pr-4 font-mono text-slate-300">${esc(a.role||'')}</td>
-      <td class="py-2 pr-4 text-slate-400">${esc(a.model||'')}</td>
-      <td class="py-2 pr-4"><span class="px-2 py-0.5 rounded-full ${sc}">${esc(a.status||'')}</span></td>
-      <td class="py-2 pr-4 text-slate-500 max-w-[10rem] truncate">${esc((a.tools||[]).join(', '))}</td>
-      <td class="py-2 text-slate-500">${esc(a.note||'')}</td>
-    </tr>`;
-  }).join('');
-
-  // JSON
-  document.getElementById('json-content').textContent = JSON.stringify(result, null, 2);
-
-  showRTab('summary');
-  resetRunBtn();
-}
-
-function resetRunBtn() {
-  const btn = document.getElementById('submit-btn');
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-play"></i>Run Agent';
-}
-
-// ── Result tabs ────────────────────────────────
-function showRTab(tab) {
-  document.querySelectorAll('.rtab-pane').forEach(el => el.classList.add('hidden'));
-  document.getElementById('rtab-' + tab).classList.remove('hidden');
-  document.querySelectorAll('.rtab').forEach(btn => {
-    const isActive = btn.getAttribute('onclick') === `showRTab('${tab}')`;
-    btn.classList.toggle('active', isActive);
-    btn.classList.toggle('text-slate-400', !isActive);
-    btn.classList.toggle('border-transparent', !isActive);
-  });
-}
-
-// ── File preview ───────────────────────────────
-async function previewFile(rid, fname) {
-  document.getElementById('preview-modal').classList.remove('hidden');
-  document.getElementById('preview-fname').textContent = fname;
-  document.getElementById('preview-content').textContent = 'Loading…';
-  document.getElementById('preview-dl-link').href = `/download/${rid}/${fname}`;
-  try {
-    const r = await fetch(`/preview/${rid}/${fname}`);
-    document.getElementById('preview-content').textContent = await r.text();
-  } catch(e) {
-    document.getElementById('preview-content').textContent = 'Error: ' + e.message;
+    document.getElementById('pdf-cits-area').classList.remove('hidden');
+    document.getElementById('pdf-cits-list').innerHTML = cits.map((c, i) => {
+      const title = typeof c === 'string' ? c : (c.title || 'Untitled');
+      const loc = typeof c === 'object' ? (c.location || '') : '';
+      return `<div class="bg-slate-900/60 border border-slate-700/30 rounded-xl px-3 py-2 flex items-start gap-2">
+        <span class="text-xs text-slate-600 font-mono shrink-0">[${i+1}]</span>
+        <div><p class="text-xs text-slate-300">${esc(title)}</p>${loc ? `<p class="text-xs text-slate-500">${esc(loc)}</p>` : ''}</div>
+      </div>`;
+    }).join('');
   }
 }
-function closePreview() {
-  document.getElementById('preview-modal').classList.add('hidden');
+
+function showPDFError(msg) {
+  setStatusBadge('pdf', 'error');
+  resetBtn('pdf-btn', '<i class="fa-solid fa-circle-question"></i>Get Answer');
+  showPanel('pdf', true);
+  const e = document.getElementById('pdf-error-msg');
+  e.classList.remove('hidden');
+  e.textContent = 'Error: ' + msg;
 }
 
-// ── Input file generator ───────────────────────
+// ── Panel 3: Input File Generator ─────────────
 let genPollId = null;
 let genCurrentFilename = null;
 
@@ -849,25 +671,18 @@ async function submitGenerate(ev) {
   const pr = document.getElementById('gen-prompt').value.trim();
   if (!sw || !pr) return;
 
-  const btn = document.getElementById('gen-btn');
-  btn.disabled = true;
-  btn.innerHTML = '<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full spin"></div> Generating…';
-
-  document.getElementById('gen-result').classList.remove('hidden');
-  document.getElementById('gen-loading-area').style.display = 'flex';
-  document.getElementById('gen-content-area').classList.add('hidden');
-  document.getElementById('gen-error-area').classList.add('hidden');
+  setBtnLoading('gen-btn', 'Generating…', 'purple');
+  openResult('gen');
+  setStatusBadge('gen', 'running');
   document.getElementById('gen-download-btn').classList.add('hidden');
 
   try {
     const fd = new FormData(document.getElementById('gen-form'));
-    const r = await fetch('/generate-input', { method:'POST', body:fd });
+    const r = await fetch('/generate-input', { method: 'POST', body: fd });
     const data = await r.json();
     if (data.error) { showGenError(data.error); return; }
     genPollId = setInterval(() => pollGen(data.run_id), 1800);
-  } catch(e) {
-    showGenError(e.message);
-  }
+  } catch(e) { showGenError(e.message); }
 }
 
 async function pollGen(rid) {
@@ -879,26 +694,21 @@ async function pollGen(rid) {
     if (data.status === 'error') { showGenError(data.error); return; }
     const res = data.result;
     genCurrentFilename = res.filename;
-    document.getElementById('gen-loading-area').style.display = 'none';
+    setStatusBadge('gen', 'done');
+    resetBtn('gen-btn', '<i class="fa-solid fa-wand-sparkles"></i>Generate Input File');
+    showPanel('gen', true);
     document.getElementById('gen-filename').textContent = res.filename;
     document.getElementById('gen-file-content').textContent = res.content;
-    document.getElementById('gen-content-area').classList.remove('hidden');
     document.getElementById('gen-download-btn').classList.remove('hidden');
-    resetGenBtn();
   } catch(_) {}
 }
 
 function showGenError(msg) {
-  document.getElementById('gen-loading-area').style.display = 'none';
+  setStatusBadge('gen', 'error');
+  resetBtn('gen-btn', '<i class="fa-solid fa-wand-sparkles"></i>Generate Input File');
+  showPanel('gen', true);
   document.getElementById('gen-error-area').classList.remove('hidden');
   document.getElementById('gen-error-msg').textContent = 'Error: ' + msg;
-  resetGenBtn();
-}
-
-function resetGenBtn() {
-  const btn = document.getElementById('gen-btn');
-  btn.disabled = false;
-  btn.innerHTML = '<i class="fa-solid fa-wand-sparkles"></i>Generate Input File';
 }
 
 function downloadGenerated() {
@@ -914,18 +724,73 @@ function fillGen(sw, pr) {
   document.getElementById('gen-prompt').value = pr;
 }
 
+// ── Status badges ──────────────────────────────
+function setStatusBadge(panel, state) {
+  const colors = { running: 'amber', done: 'emerald', error: 'red' };
+  const labels = { running: 'Running…', done: 'Completed', error: 'Error' };
+  const c = colors[state];
+  document.getElementById(panel + '-status-badge').innerHTML = `
+    <div class="w-2 h-2 bg-${c}-400 rounded-full ${state === 'running' ? 'pulse' : ''}"></div>
+    <span class="text-xs text-${c}-400">${labels[state]}</span>`;
+}
+
+// ── Result panel open/close ────────────────────
+function openResult(panel) {
+  const el = document.getElementById(panel + '-result');
+  el.classList.add('open');
+  document.getElementById(panel + '-loading').style.display = 'flex';
+  document.getElementById(panel + '-body').classList.add('hidden');
+  if (panel === 'gen') {
+    document.getElementById('gen-body').classList.add('hidden');
+    document.getElementById('gen-error-area').classList.add('hidden');
+  }
+}
+
+function showPanel(panel, done) {
+  document.getElementById(panel + '-loading').style.display = 'none';
+  const body = document.getElementById(panel + '-body');
+  if (body) body.classList.remove('hidden');
+}
+
+// ── Button helpers ─────────────────────────────
+function setBtnLoading(id, label, color) {
+  const btn = document.getElementById(id);
+  btn.disabled = true;
+  btn.innerHTML = `<div class="w-4 h-4 border-2 border-white border-t-transparent rounded-full spin"></div>${label}`;
+}
+
+function resetBtn(id, html) {
+  const btn = document.getElementById(id);
+  btn.disabled = false;
+  btn.innerHTML = html;
+}
+
+// ── File preview ───────────────────────────────
+async function previewFile(rid, fname) {
+  document.getElementById('preview-modal').classList.remove('hidden');
+  document.getElementById('preview-fname').textContent = fname;
+  document.getElementById('preview-content').textContent = 'Loading…';
+  document.getElementById('preview-dl-link').href = `/download/${rid}/${fname}`;
+  try {
+    const r = await fetch(`/preview/${rid}/${fname}`);
+    document.getElementById('preview-content').textContent = await r.text();
+  } catch(e) {
+    document.getElementById('preview-content').textContent = 'Error: ' + e.message;
+  }
+}
+
+function closePreview() {
+  document.getElementById('preview-modal').classList.add('hidden');
+}
+
 // ── Utility ────────────────────────────────────
 function esc(s) {
   return String(s)
-    .replace(/&/g,'&amp;')
-    .replace(/</g,'&lt;')
-    .replace(/>/g,'&gt;')
-    .replace(/"/g,'&quot;');
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
 }
-
-// ── Init ───────────────────────────────────────
-initPresets();
-setRoute('auto');
 </script>
 </body>
 </html>
