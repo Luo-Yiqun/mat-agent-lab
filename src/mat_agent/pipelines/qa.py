@@ -60,7 +60,7 @@ class QAPipeline:
                     "title": record.title,
                     "source_type": record.source_type,
                     "provenance": record.provenance,
-                    "snippet": " ".join(record.content.split())[:1200],
+                    "snippet": " ".join(record.content.split())[:3000],
                 }
             )
 
@@ -176,11 +176,27 @@ class QAPipeline:
 
     def _derive_direct_answer(self, request: UserRequest, references: list[dict[str, str]]) -> str:
         task = request.task.lower()
+        gap_task = any(keyword in task for keyword in ("band gap", "optical gap", "gap"))
+
         for reference in references:
             excerpt = reference.get("excerpt", "")
             value_match = EV_PATTERN.search(excerpt)
-            if value_match and any(keyword in task for keyword in ("band gap", "optical gap", "gap")):
+            if value_match and gap_task:
                 return f"The reported gap is {value_match.group(0)}."
+
+        if gap_task:
+            truncated_mentions: list[str] = []
+            for reference in references:
+                excerpt = reference.get("excerpt", "")
+                if ("gap" in excerpt.lower() or "optical" in excerpt.lower()) and excerpt.rstrip().endswith("…"):
+                    truncated_mentions.append(reference.get("source", "unknown source"))
+            if truncated_mentions:
+                sources = "; ".join(truncated_mentions)
+                return (
+                    f"The retrieved snippet(s) mention a gap value but are truncated before the number "
+                    f"({sources}). Run with --route qa and AI enabled to obtain the actual value, "
+                    f"or consult the source paper directly."
+                )
 
         for reference in references:
             excerpt = reference.get("excerpt", "")
